@@ -29,7 +29,7 @@ import org.apache.maven.model.Dependency;
 /**
  * @author <a href="mailto:kabir.khan@jboss.com">Kabir Khan</a>
  */
-public class DependencyId {
+public class DependencyId implements Comparable<DependencyId>{
     private final String groupId;
     private final String artifactId;
     private final String type;
@@ -50,18 +50,6 @@ public class DependencyId {
         this.type = dependency.getType();
         this.classifier = dependency.getClassifier();
         this.scope = dependency.getScope();
-    }
-
-    public String getGroupId() {
-        return groupId;
-    }
-
-    public String getArtifactId() {
-        return artifactId;
-    }
-
-    public String getType() {
-        return type;
     }
 
     @Override
@@ -86,5 +74,60 @@ public class DependencyId {
         result = 31 * result + (classifier != null ? classifier.hashCode() : 0);
         result = 31 * result + (scope != null ? scope.hashCode() : 0);
         return result;
+    }
+
+    @Override
+    public int compareTo(DependencyId o) {
+        int curr = groupId.compareTo(o.groupId);
+        if (curr != 0) {
+            return curr;
+        }
+        curr = artifactId.compareTo(o.artifactId);
+        if (curr != 0) {
+            return curr;
+        }
+        curr = compareNullable(type, o.type);
+        if (curr != 0) {
+            return curr;
+        }
+        curr = compareNullable(classifier, o.classifier);
+        if (curr != 0) {
+            return curr;
+        }
+        curr = compareNullable(scope, o.scope);
+        if (curr != 0) {
+            return curr;
+        }
+        return 0;
+    }
+
+    private int compareNullable(String a, String b) {
+        if (a == null && b == null) {
+            return 0;
+        } else if (a != null && b != null) {
+            return a.compareTo(b);
+        } else if (a == null && b != null) {
+            return 1;
+        } else if (a != null && b == null) {
+            return -1;
+        }
+        return 0;
+    }
+
+    public String toString () {
+        StringBuilder sb = new StringBuilder(groupId + ":" + artifactId);
+        sb.append(":");
+        if (type != null) {
+            sb.append(type);
+        }
+        sb.append(":");
+        if (classifier != null) {
+            sb.append(classifier);
+        }
+        sb.append(":");
+        if (scope != null) {
+            sb.append(scope);
+        }
+        return sb.toString();
     }
 }

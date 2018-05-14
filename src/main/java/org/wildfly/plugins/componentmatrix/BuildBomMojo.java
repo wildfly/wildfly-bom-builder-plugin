@@ -233,11 +233,13 @@ public class BuildBomMojo
     }
 
     private void addDependencyManagement(Model pomModel) {
-        Map<DependencyId, Dependency> originalDeps = createDependencyMap(mavenProject.getDependencyManagement());
+        // Map<DependencyId, Dependency> originalDeps = createDependencyMap(mavenProject.getDependencyManagement());
 
         Properties versionProperties = new Properties();
         DependencyManagement depMgmt = new DependencyManagement();
         for (Dependency originalDependency : mavenProject.getDependencyManagement().getDependencies()) {
+            // System.out.println();
+            System.out.println(new DependencyId(originalDependency));
             if (isExcludedDependency(originalDependency)) {
                 continue;
             }
@@ -266,7 +268,7 @@ public class BuildBomMojo
                 applyExclusions(originalDependency, dep);
             }
             if (inheritExclusions) {
-                inheritExclusions(originalDeps, originalDependency, dep);
+                inheritExclusions(originalDependency, dep);
             }
             depMgmt.addDependency(dep);
         }
@@ -274,12 +276,7 @@ public class BuildBomMojo
         getLog().debug("Added " + depMgmt.getDependencies().size() + " dependencies to dependency management.");
     }
 
-    private void inheritExclusions(Map<DependencyId, Dependency> originalDeps, Dependency artifact, Dependency dep) {
-        Dependency originalDependency = originalDeps.get(new DependencyId(artifact));
-        if (originalDependency == null) {
-            getLog().warn("Could not find dependency for " + artifact);
-            return;
-        }
+    private void inheritExclusions(Dependency originalDependency, Dependency dep) {
         for (Exclusion originalExclusion : originalDependency.getExclusions()) {
             dep.addExclusion(originalExclusion.clone());
         }
