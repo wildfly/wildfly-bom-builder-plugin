@@ -149,17 +149,6 @@ public class BuildBomMojo
     @Component
     MavenProject mavenProject;
 
-    /**
-     *
-     */
-    @Component
-    private ModelBuilder modelBuilder;
-
-    /**
-     *
-     */
-    @Component
-    private ProjectBuilder projectBuilder;
 
     @Component
     private ArtifactHandlerManager artifactHandlerManager;
