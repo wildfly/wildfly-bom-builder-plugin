@@ -29,7 +29,6 @@ import static org.codehaus.plexus.util.StringUtils.trim;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -38,6 +37,7 @@ import java.util.Properties;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.Exclusion;
@@ -52,10 +52,10 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.apache.maven.project.DefaultMavenProjectHelper;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
 import org.apache.maven.project.ProjectBuilder;
+import org.codehaus.plexus.component.annotations.Requirement;
 import org.codehaus.plexus.util.StringUtils;
 
 /**
@@ -156,7 +156,8 @@ public class BuildBomMojo
     private ProjectBuilder projectBuilder;
 
     @Component
-    private MavenProjectHelper projectHelper;
+    private ArtifactHandlerManager artifactHandlerManager;
+
 
     private final PomDependencyVersionsTransformer versionsTransformer;
     private final ModelWriter modelWriter;
@@ -182,12 +183,14 @@ public class BuildBomMojo
         final File file = new File(mavenProject.getBuild().getDirectory(), outputFilename);
         modelWriter.writeModel(model, file);
 
+        // Add the artifact
         Artifact projectArtifact = mavenProject.getArtifact();
         final Artifact pomArtifact =
                 new DefaultArtifact(
-                        mavenProject.getGroupId(), "component-matrix", mavenProject.getVersion(),
-                        projectArtifact.getScope(), "pom", null, projectArtifact.getArtifactHandler());
-        ((DefaultMavenProjectHelper) projectHelper).attachArtifact(mavenProject, pomArtifact);
+                        bomGroupId, bomArtifactId, bomVersion,
+                        null, "pom", null, artifactHandlerManager.getArtifactHandler("pom"));
+        pomArtifact.setFile(file);
+        mavenProject.addAttachedArtifact( pomArtifact );
     }
 
     private Model initializeModel() {
@@ -216,11 +219,7 @@ public class BuildBomMojo
     }
 
     private void addDependencyManagement(Model pomModel) {
-        // Sort the artifacts for readability
-        //List<Artifact> projectArtifacts = new ArrayList<Artifact>(mavenProject.getArtifacts());
         Map<DependencyId, Dependency> originalDeps = createDependencyMap(mavenProject.getDependencyManagement());
-        //Collections.sort(projectArtifacts);
-
 
         Properties versionProperties = new Properties();
         DependencyManagement depMgmt = new DependencyManagement();
@@ -261,58 +260,8 @@ public class BuildBomMojo
         getLog().debug("Added " + depMgmt.getDependencies().size() + " dependencies to dependency management.");
     }
 
-
-    /*private void addDependencyManagement( Model pomModel )
-    {
-        // Sort the artifacts for readability
-        List<Artifact> projectArtifacts = new ArrayList<Artifact>( mavenProject.getArtifacts() );
-        Map<DependencyId, Dependency> originalDeps = createDependencyMap(mavenProject.getDependencyManagement());
-        Collections.sort( projectArtifacts );
-
-        Properties versionProperties = new Properties();
-        DependencyManagement depMgmt = new DependencyManagement();
-        for ( Artifact artifact : projectArtifacts )
-        {
-            if (isExcludedDependency(artifact)) {
-                continue;
-            }
-
-            String versionPropertyName = VERSION_PROPERTY_PREFIX + artifact.getGroupId();
-            if (versionProperties.getProperty(versionPropertyName) != null
-                    && !versionProperties.getProperty(versionPropertyName).equals(artifact.getVersion())) {
-                versionPropertyName = VERSION_PROPERTY_PREFIX + artifact.getGroupId() + "." + artifact.getArtifactId();
-            }
-            versionProperties.setProperty(versionPropertyName, artifact.getVersion());
-
-            Dependency dep = new Dependency();
-            dep.setGroupId( artifact.getGroupId() );
-            dep.setArtifactId( artifact.getArtifactId() );
-            dep.setVersion(addVersionProperties ? "${" + versionPropertyName + "}" : artifact.getVersion());
-            if ( !StringUtils.isEmpty( artifact.getClassifier() ))
-            {
-                dep.setClassifier( artifact.getClassifier() );
-            }
-            if ( !StringUtils.isEmpty( artifact.getType() ))
-            {
-                dep.setType( artifact.getType() );
-            }
-            if (exclusions != null) {
-                applyExclusions(artifact, dep);
-            }
-            if (inheritExclusions) {
-                inheritExclusions(originalDeps, artifact, dep);
-            }
-            depMgmt.addDependency( dep );
-        }
-        pomModel.setDependencyManagement( depMgmt );
-        if (addVersionProperties) {
-            pomModel.getProperties().putAll(versionProperties);
-        }
-        getLog().debug( "Added " + projectArtifacts.size() + " dependencies." );
-    }*/
-
     private void inheritExclusions(Map<DependencyId, Dependency> originalDeps, Dependency artifact, Dependency dep) {
-        Dependency originalDependency = originalDeps.get(new DependencyId(artifact.getGroupId(), artifact.getArtifactId(), artifact.getType()));
+        Dependency originalDependency = originalDeps.get(new DependencyId(artifact));
         if (originalDependency == null) {
             getLog().warn("Could not find dependency for " + artifact);
             return;
@@ -367,79 +316,10 @@ public class BuildBomMojo
         }
         Map<DependencyId, Dependency> dependencyMap = new HashMap<>();
         for (Dependency dep : dependencyManagement.getDependencies()) {
-            dependencyMap.put(new DependencyId(dep.getGroupId(), dep.getArtifactId(), dep.getType()), dep);
+            dependencyMap.put(new DependencyId(dep), dep);
         }
         return dependencyMap;
     }
-/*
-    private void replaceFile( File oldFile, File newFile )
-            throws MojoExecutionException
-    {
-        getLog().info( "Replacing " + oldFile + " with " + newFile );
-
-        File origFile = new File( outputDirectory, "original-" + oldFile.getName() );
-        if ( oldFile.exists() && !oldFile.renameTo( origFile ) )
-        {
-            // try a gc to see if an unclosed stream needs garbage collecting
-            System.gc();
-            System.gc();
-
-            if ( !oldFile.renameTo( origFile ) )
-            {
-                // Still didn't work. We'll do a copy
-                try
-                {
-                    copyFiles( oldFile, origFile );
-                }
-                catch ( IOException ex )
-                {
-                    // kind of ignorable here. We're just trying to save the original
-                    getLog().warn( ex );
-                }
-            }
-        }
-        if ( !newFile.renameTo( oldFile ) )
-        {
-            // try a gc to see if an unclosed stream needs garbage collecting
-            System.gc();
-            System.gc();
-
-            if ( !newFile.renameTo( oldFile ) )
-            {
-                // Still didn't work. We'll do a copy
-                try
-                {
-                    copyFiles( newFile, oldFile );
-                }
-                catch ( IOException ex )
-                {
-                    throw new MojoExecutionException( "Could not replace original artifact with shaded artifact!", ex );
-                }
-            }
-        }
-    }
-
-    private void copyFiles( File source, File target )
-            throws IOException
-    {
-        InputStream in = null;
-        OutputStream out = null;
-        try
-        {
-            in = new FileInputStream( source );
-            out = new FileOutputStream( target );
-            IOUtil.copy( in, out );
-            out.close();
-            out = null;
-            in.close();
-            in = null;
-        }
-        finally
-        {
-            IOUtil.close( in );
-            IOUtil.close( out );
-        }
-    }*/
 
     static class ModelWriter {
 

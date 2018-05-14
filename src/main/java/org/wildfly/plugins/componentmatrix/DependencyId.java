@@ -23,6 +23,9 @@
 
 package org.wildfly.plugins.componentmatrix;
 
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.model.Dependency;
+
 /**
  * @author <a href="mailto:kabir.khan@jboss.com">Kabir Khan</a>
  */
@@ -30,11 +33,23 @@ public class DependencyId {
     private final String groupId;
     private final String artifactId;
     private final String type;
+    private final String classifier;
+    private final String scope;
 
-    public DependencyId(String groupId, String artifactId, String type) {
-        this.groupId = groupId;
-        this.artifactId = artifactId;
-        this.type = type;
+    public DependencyId(Artifact artifact) {
+        this.groupId = artifact.getGroupId();
+        this.artifactId = artifact.getArtifactId();
+        this.type = artifact.getType();
+        this.classifier = artifact.getClassifier();
+        this.scope = artifact.getScope();
+    }
+
+    public DependencyId(Dependency dependency) {
+        this.groupId = dependency.getGroupId();
+        this.artifactId = dependency.getArtifactId();
+        this.type = dependency.getType();
+        this.classifier = dependency.getClassifier();
+        this.scope = dependency.getScope();
     }
 
     public String getGroupId() {
@@ -58,14 +73,18 @@ public class DependencyId {
 
         if (!groupId.equals(that.groupId)) return false;
         if (!artifactId.equals(that.artifactId)) return false;
-        return type.equals(that.type);
+        if (type != null ? !type.equals(that.type) : that.type != null) return false;
+        if (classifier != null ? !classifier.equals(that.classifier) : that.classifier != null) return false;
+        return scope != null ? scope.equals(that.scope) : that.scope == null;
     }
 
     @Override
     public int hashCode() {
         int result = groupId.hashCode();
         result = 31 * result + artifactId.hashCode();
-        result = 31 * result + type.hashCode();
+        result = 31 * result + (type != null ? type.hashCode() : 0);
+        result = 31 * result + (classifier != null ? classifier.hashCode() : 0);
+        result = 31 * result + (scope != null ? scope.hashCode() : 0);
         return result;
     }
 }
