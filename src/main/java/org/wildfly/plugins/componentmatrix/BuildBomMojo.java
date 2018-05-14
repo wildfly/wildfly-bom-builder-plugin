@@ -238,8 +238,6 @@ public class BuildBomMojo
         Properties versionProperties = new Properties();
         DependencyManagement depMgmt = new DependencyManagement();
         for (Dependency originalDependency : mavenProject.getDependencyManagement().getDependencies()) {
-            // System.out.println();
-            System.out.println(new DependencyId(originalDependency));
             if (isExcludedDependency(originalDependency)) {
                 continue;
             }
