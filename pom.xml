@@ -38,6 +38,13 @@
     </license>
   </licenses>
 
+  <scm>
+    <connection>scm:git:git@github.com:wildfly/wildfly-component-matrix-plugin.git</connection>
+    <developerConnection>scm:git:git@github.com:wildfly/wildfly-component-matrix-plugin.git</developerConnection>
+    <url>https://github.com/wildfly/wildfly-component-matrix-plugin</url>
+  </scm>
+
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <mavenVersion>3.2.1</mavenVersion>
