@@ -29,11 +29,14 @@ import static org.codehaus.plexus.util.StringUtils.trim;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
@@ -43,6 +46,7 @@ import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.Exclusion;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
+import org.apache.maven.model.Profile;
 import org.apache.maven.model.building.ModelBuilder;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.plugin.AbstractMojo;
@@ -136,6 +140,8 @@ public class BuildBomMojo
     @Parameter
     private boolean inheritExclusions;
 
+    @Parameter
+    private Set<String> includeProfiles;
 
     /**
      * The current project
@@ -213,6 +219,25 @@ public class BuildBomMojo
         }
         if (parent != null) {
             pomModel.setParent(parent);
+        }
+
+        Set<String> addedProfiles = new HashSet<>();
+        List<Profile> profiles = new ArrayList<>();
+        MavenProject current = mavenProject;
+        while (current != null) {
+            Model currModel = current.getModel();
+            if (currModel != null) {
+                for ( Profile profile : currModel.getProfiles() ) {
+                    if (includeProfiles.contains(profile.getId()) && !addedProfiles.contains(profile.getId())) {
+                        profiles.add(profile);
+                        addedProfiles.add(profile.getId());
+                    }
+                }
+            }
+            current = current.getParent();
+        }
+        if (profiles.size() > 0) {
+            pomModel.setProfiles(profiles);
         }
 
         return pomModel;
