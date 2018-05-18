@@ -27,7 +27,7 @@
 
   <groupId>org.wildfly.plugins</groupId>
   <artifactId>wildfly-component-matrix-plugin</artifactId>
-  <version>1.0.2.Final-SNAPSHOT</version>
+  <version>1.0.2.Final</version>
   <packaging>maven-plugin</packaging>
 
   <licenses>
