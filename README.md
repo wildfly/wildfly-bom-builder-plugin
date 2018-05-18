@@ -22,6 +22,12 @@ Example usage:
                             <parent>
                                 <groupId>org.jboss</groupId>
                                 <artifactId>jboss-parent</artifactId>
+                                <!--
+                                    The version is optional in some cases. If a parent with the specified groupId and
+                                    artifactId can be found in the consuming pom's parents, and the version is not
+                                    specified, then the version of the consuming pom's parent will be used. If a parent
+                                    is specified that is not in the consuming pom's parents, an error will be thrown.
+                                -->
                                 <version>26</version>
                                 <relativePath/>
                             </parent>
