@@ -207,6 +207,26 @@ public class BuildBomMojo
             pomModel.setLicenses(mavenProject.getLicenses());
         }
         if (parent != null) {
+            if (parent.getGroupId() == null) {
+                throw new IllegalArgumentException("No groupId was set for the parent");
+            }
+            if (parent.getArtifactId() == null) {
+                throw new IllegalArgumentException("No artifactId was set for the parent");
+            }
+            if (parent.getVersion() == null) {
+                MavenProject current = mavenProject;
+                while (current != null) {
+                    if (current.getGroupId().equals(parent.getGroupId()) && current.getArtifactId().equals(parent.getArtifactId())) {
+                        parent.setVersion(current.getVersion());
+                        break;
+                    }
+                    current = current.getParent();
+                }
+                if (parent.getVersion() == null) {
+                    throw new IllegalArgumentException("No version was set for the parent " + parent.getGroupId() + ":" + parent.getArtifactId() +
+                            " and it cannot be determined from the parents of the consuming pom");
+                }
+            }
             pomModel.setParent(parent);
         }
 
