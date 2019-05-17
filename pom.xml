@@ -26,8 +26,8 @@
   </parent>
 
   <groupId>org.wildfly.plugins</groupId>
-  <artifactId>wildfly-component-matrix-plugin</artifactId>
-  <version>1.0.3.Final-SNAPSHOT</version>
+  <artifactId>wildfly-bom-builder-plugin</artifactId>
+  <version>1.0.0.Alpha1-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
 
   <licenses>
@@ -39,9 +39,9 @@
   </licenses>
 
   <scm>
-    <connection>scm:git:git@github.com:wildfly/wildfly-component-matrix-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:wildfly/wildfly-component-matrix-plugin.git</developerConnection>
-    <url>https://github.com/wildfly/wildfly-component-matrix-plugin</url>
+    <connection>scm:git:git@github.com:wildfly/wildfly-bom-builder-plugin.git</connection>
+    <developerConnection>scm:git:git@github.com:wildfly/wildfly-bom-builder-plugin.git</developerConnection>
+    <url>https://github.com/wildfly/wildfly-bom-builder-plugin</url>
   </scm>
 
 
@@ -82,6 +82,12 @@
       <artifactId>maven-plugin-annotations</artifactId>
       <version>${mavenPluginPluginVersion}</version>
       <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.aether</groupId>
+      <artifactId>aether-api</artifactId>
+      <version>0.9.0.M2</version>
     </dependency>
 
     <!-- Test dependencies -->
@@ -130,6 +136,7 @@
     </pluginManagement>
   </build>
 
+  <!--
   <profiles>
     <profile>
       <id>run-its</id>
@@ -168,5 +175,6 @@
       </build>
     </profile>
   </profiles>
+  -->
 </project>
 

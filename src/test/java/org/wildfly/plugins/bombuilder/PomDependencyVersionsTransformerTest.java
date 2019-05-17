@@ -21,7 +21,7 @@
  *
  */
 
-package org.wildfly.plugins.componentmatrix;
+package org.wildfly.plugins.bombuilder;
 
 import static org.junit.Assert.assertEquals;
 
