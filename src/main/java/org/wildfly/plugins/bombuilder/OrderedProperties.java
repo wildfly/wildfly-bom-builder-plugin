@@ -23,11 +23,8 @@
 
 package org.wildfly.plugins.bombuilder;
 
-import java.util.AbstractSet;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -36,47 +33,32 @@ import java.util.Set;
  * class is not thread safe
  */
 class OrderedProperties extends Properties {
-    private final List<Object> keyOrder = new ArrayList<>();
-
-
-    @Override
-    public synchronized void putAll(Map<?, ?> t) {
-        super.putAll(t);
-    }
+    private final LinkedHashSet<Object> orderedKeys = new LinkedHashSet<>();
 
     @Override
     public Set<Object> keySet() {
-        return Collections.synchronizedSet(new KeySet());
+        return Collections.unmodifiableSet(orderedKeys);
+    }
+
+    @Override
+    public synchronized void putAll(Map<?, ?> t) {
+        // enforce different JDK impls to delegate to put
+        for (Map.Entry<?, ?> e : t.entrySet()) {
+            put(e.getKey(), e.getValue());
+        }
     }
 
     @Override
     public synchronized Object put(Object key, Object value) {
-        if (keyOrder.contains(key)) {
-            keyOrder.remove(key);
-        }
-        keyOrder.add(key);
+        // workaround LinkedHashSet reinserts not changing order
+        orderedKeys.remove(key);
+        orderedKeys.add(key);
         return super.put(key, value);
     }
 
-    private class KeySet extends AbstractSet<Object> {
-        public Iterator<Object> iterator() {
-            return keyOrder.iterator();
-        }
-
-        public int size() {
-            return keyOrder.size();
-        }
-
-        public boolean contains(Object o) {
-            return containsKey(o);
-        }
-
-        public boolean remove(Object o) {
-            throw new UnsupportedOperationException();
-        }
-
-        public void clear() {
-            throw new UnsupportedOperationException();
-        }
+    @Override
+    public synchronized boolean remove(Object key, Object value) {
+        orderedKeys.remove(key);
+        return super.remove(key, value);
     }
 }
