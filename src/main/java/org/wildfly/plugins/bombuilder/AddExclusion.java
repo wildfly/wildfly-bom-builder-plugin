@@ -21,13 +21,13 @@
  *
  */
 
-package org.wildfly.plugins.componentmatrix;
+package org.wildfly.plugins.bombuilder;
 
 /**
  * A class to represent exclusion configuration for the BOM
  * builder.
  */
-public class BomExclusion {
+public class AddExclusion {
 
     private String dependencyGroupId;
 

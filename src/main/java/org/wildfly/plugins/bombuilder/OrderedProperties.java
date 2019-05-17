@@ -21,7 +21,7 @@
  *
  */
 
-package org.wildfly.plugins.componentmatrix;
+package org.wildfly.plugins.bombuilder;
 
 import java.util.AbstractSet;
 import java.util.ArrayList;

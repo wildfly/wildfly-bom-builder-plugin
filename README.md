@@ -1,5 +1,5 @@
-# wildfly-component-matrix-plugin
-Generates the component matrix BOM
+# wildfly-bom-builder-plugin
+Maven plugin that builds Wildfly BOMs
 
 Inspired by https://github.com/jboss/bom-builder-maven-plugin this plugin inspects the available dependency management entries and outputs them to a BOM file.
 
@@ -9,7 +9,7 @@ Example usage:
         <plugins>
             <plugin>
                 <groupId>org.wildfly.plugins</groupId>
-                <artifactId>wildfly-component-matrix-plugin</artifactId>
+                <artifactId>wildfly-bom-builder-plugin</artifactId>
                 <version>1.0.0.Alpha1-SNAPSHOT</version>
                 <executions>
                     <execution>
@@ -42,7 +42,7 @@ Example usage:
                             <!-- The maven description of the bom -->
                             <bomDescription>WildFly Core: Component Matrix</bomDescription>
                             <!-- Whether to inherit the exclusions for each dependency management entry -->
-                            <inheritExclusions>true</inheritExclusions>
+                            <inheritExclusions>ALL</inheritExclusions>
                             <!-- Whether to copy the licenses from the caller into the generated bom -->
                             <licenses>true</licenses>
                             <!-- A list of profiles to include in the generated bom -->
@@ -56,5 +56,3 @@ Example usage:
         </plugins>
     </build>
 ```    
-
-In addition it supports the `exlusions` and `dependencyExclusions` documented in https://github.com/jboss/bom-builder-maven-plugin.

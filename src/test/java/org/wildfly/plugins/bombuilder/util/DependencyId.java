@@ -21,7 +21,7 @@
  *
  */
 
-package org.wildfly.plugins.componentmatrix;
+package org.wildfly.plugins.bombuilder.util;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Dependency;
@@ -36,20 +36,57 @@ public class DependencyId implements Comparable<DependencyId>{
     private final String classifier;
     private final String scope;
 
-    public DependencyId(Artifact artifact) {
-        this.groupId = artifact.getGroupId();
-        this.artifactId = artifact.getArtifactId();
-        this.type = artifact.getType();
-        this.classifier = artifact.getClassifier();
-        this.scope = artifact.getScope();
+    public DependencyId(Artifact dependency) {
+        this(dependency.getGroupId(), dependency.getArtifactId(), dependency.getType(), dependency.getClassifier(), dependency.getScope());
     }
 
     public DependencyId(Dependency dependency) {
-        this.groupId = dependency.getGroupId();
-        this.artifactId = dependency.getArtifactId();
-        this.type = dependency.getType();
-        this.classifier = dependency.getClassifier();
-        this.scope = dependency.getScope();
+        this(dependency.getGroupId(), dependency.getArtifactId(), dependency.getType(), dependency.getClassifier(), dependency.getScope());
+    }
+
+    public DependencyId(org.eclipse.aether.graph.Dependency dependency) {
+        this(dependency.getArtifact().getGroupId(), dependency.getArtifact().getArtifactId(), dependency.getArtifact().getExtension(), dependency.getArtifact().getClassifier(), dependency.getScope());
+    }
+
+    public DependencyId(String groupId, String artifactId, String type, String classifier, String scope) {
+        this.groupId = groupId.trim();
+        this.artifactId = artifactId.trim();
+        if (type != null) {
+            type = type.trim();
+        }
+        this.type = (type == null || type.isEmpty()) ? "jar" : type;
+        if (classifier != null) {
+            classifier = classifier.trim();
+        }
+        this.classifier = (classifier == null || classifier.isEmpty()) ? null : classifier;
+        if (scope != null) {
+            scope = scope.trim();
+        }
+        this.scope = (scope == null || scope.isEmpty()) ? "compile" : scope;
+    }
+
+    public String getGroupId() {
+        return groupId;
+    }
+
+    public String getArtifactId() {
+        return artifactId;
+    }
+
+    public String getClassifier() {
+        return classifier;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public String getManagementKey() {
+        return groupId + ":" + artifactId + ":" + type + ( classifier != null ? ":" + classifier : "" );
     }
 
     @Override

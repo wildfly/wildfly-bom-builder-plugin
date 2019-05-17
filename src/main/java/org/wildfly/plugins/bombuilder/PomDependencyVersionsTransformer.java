@@ -21,7 +21,7 @@
  *
  */
 
-package org.wildfly.plugins.componentmatrix;
+package org.wildfly.plugins.bombuilder;
 
 import java.util.HashSet;
 import java.util.Map;

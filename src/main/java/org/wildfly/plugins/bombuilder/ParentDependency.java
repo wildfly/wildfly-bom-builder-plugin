@@ -21,7 +21,7 @@
  *
  */
 
-package org.wildfly.plugins.componentmatrix;
+package org.wildfly.plugins.bombuilder;
 
 /**
  * @author <a href="mailto:kabir.khan@jboss.com">Kabir Khan</a>
