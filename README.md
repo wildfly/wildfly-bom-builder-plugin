@@ -10,7 +10,7 @@ Example usage:
             <plugin>
                 <groupId>org.wildfly.plugins</groupId>
                 <artifactId>wildfly-bom-builder-plugin</artifactId>
-                <version>1.0.0.Alpha1-SNAPSHOT</version>
+                <version>2.0.0.Alpha1-SNAPSHOT</version>
                 <executions>
                     <execution>
                         <id>build-bom</id>
