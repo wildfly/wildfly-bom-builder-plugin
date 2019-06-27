@@ -428,11 +428,7 @@ public class BuildBomMojo
                 clone.getDependencyManagement().setDependencies(new ArrayList<>(orderedManagedDependencies));
                 clone.setDependencies(new ArrayList<>());
                 for (String managementKey : includedManagedDependencies) {
-                    final Dependency managedDependency = managedDependenciesMap.get(managementKey);
-                    if (bomWithDependencies) {
-                        addBomDependency(managedDependency, bomDependencies);
-                    }
-                    final Dependency managedDependencyClone = managedDependency.clone();
+                    final Dependency managedDependencyClone = managedDependenciesMap.get(managementKey).clone();
                     // remove original exclusions
                     managedDependencyClone.setExclusions(null);
                     // replace any import scopes with compile
@@ -459,7 +455,11 @@ public class BuildBomMojo
                             resolvedDependency.setClassifier(resolvedClassifier);
                         }
                         resolvedDependency.setVersion(aDependency.getArtifact().getVersion());
-                        addBomManagedDependency(managedDependenciesMap.get(resolvedDependency.getManagementKey()), bomManagedDependencies);
+                        final Dependency managedDependency = managedDependenciesMap.get(resolvedDependency.getManagementKey());
+                        addBomManagedDependency(managedDependency, bomManagedDependencies);
+                        if (bomWithDependencies) {
+                            addBomDependency(managedDependency, bomDependencies);
+                        }
                     }
                 } catch (Throwable e) {
                     throw new MojoExecutionException(e.getMessage(),e);
@@ -524,6 +524,9 @@ public class BuildBomMojo
     }
 
     private void addBomDependency(Dependency dependency, List<Dependency> bomDependencies) {
+        if (dependency == null) {
+            return;
+        }
         if ("import".equals(dependency.getScope())) {
             // do not add imports
             return;
