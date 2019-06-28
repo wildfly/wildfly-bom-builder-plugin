@@ -270,7 +270,7 @@ public class BuildBomMojo
             MavenProject current = mavenProject;
             while (current != null) {
                 Model currModel = current.getModel();
-                if (currModel != null) {
+                if (currModel != null && currModel.getProfiles() != null) {
                     for (Profile profile : currModel.getProfiles()) {
                         if (includeProfiles.contains(profile.getId()) && !addedProfiles.contains(profile.getId())) {
                             profiles.add(profile);
@@ -295,7 +295,7 @@ public class BuildBomMojo
                     final Build build = currModel.getBuild();
                     if (build != null) {
                         final PluginManagement pluginManagement = build.getPluginManagement();
-                        if (pluginManagement != null) {
+                        if (pluginManagement != null && pluginManagement.getPlugins() != null) {
                             for (Plugin plugin : pluginManagement.getPlugins()) {
                                 if (includePlugins.contains(plugin.getArtifactId()) && addedPlugins.add(plugin.getArtifactId())) {
                                     plugins.add(plugin);
@@ -350,7 +350,7 @@ public class BuildBomMojo
     }
 
     private void addDependencyManagement(Model pomModel) throws MojoExecutionException {
-        if (mavenProject.getDependencyManagement() == null) {
+        if (mavenProject.getDependencyManagement() == null || mavenProject.getDependencyManagement().getDependencies() == null) {
             return;
         }
         pomModel.setDependencyManagement(new DependencyManagement());
