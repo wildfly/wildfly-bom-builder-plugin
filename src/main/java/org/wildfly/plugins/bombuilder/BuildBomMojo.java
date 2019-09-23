@@ -162,6 +162,12 @@ public class BuildBomMojo
     @Parameter
     private boolean bomWithDependencies = false;
 
+    /**
+     * Set to {@code true} to include {@code compile} dependencies as {@code provided}. Useful for BOMs that contain artifacts that are provided by an specific environment. Affects both managed and unmanged dependencies.
+     */
+    @Parameter
+    private boolean compileAsProvided = false;
+
     public enum InheritExclusions {
         ALL,
         NONE,
@@ -518,6 +524,10 @@ public class BuildBomMojo
     private void addBomManagedDependency(Dependency managedDependency, List<Dependency> bomManagedDependencies) {
         if (managedDependency != null) {
             managedDependency = managedDependency.clone();
+            String scope = managedDependency.getScope();
+            if (compileAsProvided && (null == scope || "compile".equals(scope))) {
+                managedDependency.setScope("provided");
+            }
             bomManagedDependencies.add(managedDependency);
             getLog().info("Managed dependency "+managedDependency.getManagementKey()+" added to BOM.");
         }
@@ -535,7 +545,11 @@ public class BuildBomMojo
         bomDependency.setExclusions(null);
         bomDependency.setVersion(null);
         if ("compile".equals(bomDependency.getScope())) {
-            bomDependency.setScope(null);
+            if(compileAsProvided){
+                bomDependency.setScope("provided");
+            } else {
+                bomDependency.setScope(null);
+            }
         }
         bomDependencies.add(bomDependency);
         getLog().info("Dependency "+bomDependency.getManagementKey()+" added to BOM.");
