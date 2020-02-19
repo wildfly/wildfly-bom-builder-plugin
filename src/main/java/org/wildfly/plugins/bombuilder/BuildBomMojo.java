@@ -46,7 +46,10 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.DefaultDependencyResolutionRequest;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectDependenciesResolver;
+import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.resolution.ArtifactDescriptorException;
+import org.eclipse.aether.resolution.ArtifactDescriptorRequest;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -138,6 +141,12 @@ public class BuildBomMojo
     private List<IncludeDependency> includeDependencies;
 
     /**
+     * List of source's managed dependencies which (only) its transitives should be added to BOM, regardless of scope.
+     */
+    @Parameter
+    private List<IncludeDependency> includeDependenciesTransitives;
+
+    /**
      * List of dependencies which should be imported to BOM
      */
     @Parameter
@@ -197,6 +206,9 @@ public class BuildBomMojo
 
     @Parameter( defaultValue = "${repositorySystemSession}", readonly = true, required = true )
     private RepositorySystemSession repositorySystemSession;
+
+    @Component
+    private RepositorySystem repositorySystem;
 
     @Component
     private ProjectDependenciesResolver projectDependenciesResolver;
@@ -361,11 +373,39 @@ public class BuildBomMojo
         final List<String> includedManagedDependencies = new ArrayList<>();
         final List<String> includedManagedDependenciesWithTransitives = new ArrayList<>();
         for (Dependency dependency : mavenProject.getDependencyManagement().getDependencies()) {
-            if (isExcludedDependency(dependency)) {
+            if (isExcludedDependency(dependency) && getIncludedTransitiveDependency(dependency) == null) {
                 getLog().info("Skipping dependency excluded by config: "+dependency.getManagementKey());
                 continue;
             }
             addBuilderManagedDependency(dependency, orderedManagedDependencies, managedDependenciesMap, includedManagedDependencies, includedManagedDependenciesWithTransitives, managedExclusions);
+        }
+        // include transitives of dependencies
+        if (includeDependenciesTransitives != null) {
+            for (IncludeDependency includeDependencyTransitives : includeDependenciesTransitives) {
+                // in case transitives of the included transitives should be included too
+                final boolean transitive = includeDependencyTransitives.getTransitive() == null ? includeTransitives : includeDependencyTransitives.getTransitive();
+                final Dependency dependency = managedDependenciesMap.get(includeDependencyTransitives.getManagementKey());
+                if (isExcludedDependency(dependency)) {
+                    // an excluded dependency which was mapped only due to later include its transitives, unmap it now
+                    getLog().info("Skipping dependency excluded by config: "+dependency.getManagementKey());
+                    managedDependenciesMap.remove(dependency.getManagementKey());
+                }
+                // retrieve and include the dependency transitives
+                for (Dependency dependencyTransitive : getDependencyTransitives(dependency)) {
+                    if (!managedDependenciesMap.containsKey(dependencyTransitive.getManagementKey()) || isExcludedDependency(dependencyTransitive)) {
+                        // skip unmanaged or excluded
+                        continue;
+                    }
+                    final String managementKey = dependencyTransitive.getManagementKey();
+                    includedManagedDependencies.add(managementKey);
+                    if (transitive) {
+                        includedManagedDependenciesWithTransitives.add(managementKey);
+                        getLog().debug("Dependency transitive included (with transitives) by config: "+managementKey);
+                    } else {
+                        getLog().debug("Dependency transitive included (without transitives) by config: "+managementKey);
+                    }
+                }
+            }
         }
         // add version refs
         if (versionRefDependencies != null) {
@@ -419,7 +459,7 @@ public class BuildBomMojo
         }
         final List<Dependency> bomManagedDependencies = new ArrayList<>();
         final List<Dependency> bomDependencies = new ArrayList<>();
-        if (includeDependencies != null) {
+        if (includeDependencies != null || includeDependenciesTransitives != null) {
             // if includeDependencies is defined... filter the builder's dep management
             if (!includedManagedDependenciesWithTransitives.isEmpty()) {
                 // need to resolve transitives
@@ -552,8 +592,32 @@ public class BuildBomMojo
         return false;
     }
 
+    private IncludeDependency getIncludedTransitiveDependency(Dependency dependency) {
+        return getDependencyMatch(dependency, includeDependenciesTransitives);
+    }
+
     private IncludeDependency getIncludedDependency(Dependency dependency) {
         return getDependencyMatch(dependency, includeDependencies);
+    }
+
+    private Collection<? extends Dependency> getDependencyTransitives(Dependency dependency) throws MojoExecutionException {
+        final List<Dependency> transitives = new ArrayList<>();
+        try {
+            for (org.eclipse.aether.graph.Dependency aDependency : repositorySystem.readArtifactDescriptor(repositorySystemSession, new ArtifactDescriptorRequest().setArtifact(new org.eclipse.aether.artifact.DefaultArtifact(dependency.getGroupId(), dependency.getArtifactId(), dependency.getClassifier(), dependency.getType(), dependency.getVersion()))).getDependencies()) {
+                final Dependency transitive = new Dependency();
+                transitive.setGroupId(trim(aDependency.getArtifact().getGroupId()));
+                transitive.setArtifactId(trim(aDependency.getArtifact().getArtifactId()));
+                transitive.setType(trim(aDependency.getArtifact().getExtension()));
+                String resolvedClassifier = trim(aDependency.getArtifact().getClassifier());
+                if (resolvedClassifier != null && !resolvedClassifier.isEmpty()) {
+                    transitive.setClassifier(resolvedClassifier);
+                }
+                transitives.add(transitive);
+            }
+        } catch (ArtifactDescriptorException e) {
+            throw new MojoExecutionException(e.getMessage(),e);
+        }
+        return transitives;
     }
 
     private boolean isImportedDependency(Dependency dependency) {
