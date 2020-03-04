@@ -48,8 +48,12 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectDependenciesResolver;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.ArtifactDescriptorException;
 import org.eclipse.aether.resolution.ArtifactDescriptorRequest;
+import org.eclipse.aether.resolution.ArtifactRequest;
+import org.eclipse.aether.resolution.ArtifactResolutionException;
+import org.eclipse.aether.resolution.ArtifactResult;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -209,6 +213,9 @@ public class BuildBomMojo
 
     @Component
     private RepositorySystem repositorySystem;
+
+    @Parameter( defaultValue = "${project.remoteProjectRepositories}", readonly = true, required = true )
+    private List<RemoteRepository> repositories;
 
     @Component
     private ProjectDependenciesResolver projectDependenciesResolver;
@@ -603,7 +610,13 @@ public class BuildBomMojo
     private Collection<? extends Dependency> getDependencyTransitives(Dependency dependency) throws MojoExecutionException {
         final List<Dependency> transitives = new ArrayList<>();
         try {
-            for (org.eclipse.aether.graph.Dependency aDependency : repositorySystem.readArtifactDescriptor(repositorySystemSession, new ArtifactDescriptorRequest().setArtifact(new org.eclipse.aether.artifact.DefaultArtifact(dependency.getGroupId(), dependency.getArtifactId(), dependency.getClassifier(), dependency.getType(), dependency.getVersion()))).getDependencies()) {
+            // ensure artifact is resolved
+            final org.eclipse.aether.artifact.Artifact artifact = new org.eclipse.aether.artifact.DefaultArtifact(dependency.getGroupId(), dependency.getArtifactId(), dependency.getClassifier(), dependency.getType(), dependency.getVersion());
+            if (repositorySystem.resolveArtifact(repositorySystemSession, new ArtifactRequest().setRepositories(repositories).setArtifact(artifact)).isMissing()) {
+                throw new MojoExecutionException("Artifact for dependency "+dependency.getManagementKey()+" is missing, unable to retrieve dependencies");
+            }
+            // retrieve its transitives
+            for (org.eclipse.aether.graph.Dependency aDependency : repositorySystem.readArtifactDescriptor(repositorySystemSession, new ArtifactDescriptorRequest().setRepositories(repositories).setArtifact(artifact)).getDependencies()) {
                 final Dependency transitive = new Dependency();
                 transitive.setGroupId(trim(aDependency.getArtifact().getGroupId()));
                 transitive.setArtifactId(trim(aDependency.getArtifact().getArtifactId()));
@@ -615,6 +628,8 @@ public class BuildBomMojo
                 transitives.add(transitive);
             }
         } catch (ArtifactDescriptorException e) {
+            throw new MojoExecutionException(e.getMessage(),e);
+        } catch (ArtifactResolutionException e) {
             throw new MojoExecutionException(e.getMessage(),e);
         }
         return transitives;
