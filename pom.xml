@@ -30,13 +30,13 @@
   <version>2.0.0.Final-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
 
-  <licenses>
-    <license>
-      <name>GNU Lesser General Public License v2.1 only</name>
-      <url>http://repository.jboss.org/licenses/lgpl-2.1.txt</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>http://repository.jboss.org/licenses/apache-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
   <scm>
     <connection>scm:git:git@github.com:wildfly/wildfly-bom-builder-plugin.git</connection>
