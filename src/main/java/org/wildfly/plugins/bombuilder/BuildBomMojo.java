@@ -35,6 +35,7 @@ import org.apache.maven.model.Parent;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginManagement;
 import org.apache.maven.model.Profile;
+import org.apache.maven.model.Repository;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -199,6 +200,9 @@ public class BuildBomMojo
     @Parameter
     private Set<String> includePlugins;
 
+    @Parameter
+    private Set<String> includeRepositories;
+
     /**
      * The current project
      */
@@ -301,6 +305,42 @@ public class BuildBomMojo
             }
             if (profiles.size() > 0) {
                 pomModel.setProfiles(profiles);
+            }
+        }
+
+        if (includeRepositories != null) {
+            Set<String> addedRepositories = new HashSet<>();
+            Set<String> addedPluginRepositories = new HashSet<>();
+            List<Repository> repositories = new ArrayList<>();
+            List<Repository> pluginRepositories = new ArrayList<>();
+            MavenProject current = mavenProject;
+            while (current != null) {
+                Model currModel = current.getModel();
+                if (currModel != null) {
+                    if (currModel.getRepositories() != null) {
+                        for (Repository repository : currModel.getRepositories()) {
+                            if ((includeRepositories.isEmpty() || includeRepositories.contains(repository.getId())) && !addedRepositories.contains(repository.getId())) {
+                                repositories.add(repository);
+                                addedRepositories.add(repository.getId());
+                            }
+                        }
+                    }
+                    if (currModel.getPluginRepositories() != null) {
+                        for (Repository pluginRepository : currModel.getPluginRepositories()) {
+                            if ((includeRepositories.isEmpty() || includeRepositories.contains(pluginRepository.getId())) && !addedPluginRepositories.contains(pluginRepository.getId())) {
+                                pluginRepositories.add(pluginRepository);
+                                addedPluginRepositories.add(pluginRepository.getId());
+                            }
+                        }
+                    }
+                }
+                current = current.getParent();
+            }
+            if (repositories.size() > 0) {
+                pomModel.setRepositories(repositories);
+            }
+            if (pluginRepositories.size() > 0) {
+                pomModel.setPluginRepositories(pluginRepositories);
             }
         }
 
