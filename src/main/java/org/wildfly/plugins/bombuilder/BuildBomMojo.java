@@ -54,13 +54,13 @@ import org.eclipse.aether.resolution.ArtifactDescriptorException;
 import org.eclipse.aether.resolution.ArtifactDescriptorRequest;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
-import org.eclipse.aether.resolution.ArtifactResult;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -488,16 +488,75 @@ public class BuildBomMojo
                     break;
                 case UNMANAGED:
                     if (!dependency.getExclusions().isEmpty()) {
-                        final List<Exclusion> filteredExclusions = new ArrayList<>();
+                        // resolve wildcards
+                        Collection<? extends Dependency> transitives = null;
+                        final Map<String, Exclusion> resolvedExclusions = new HashMap<>();
                         for (Exclusion exclusion : dependency.getExclusions()) {
-                            if (managedExclusions.contains(exclusion.getGroupId()+":"+exclusion.getArtifactId())) {
+                            if (exclusion.getGroupId().trim().equals("*")) {
+                                if (exclusion.getArtifactId().trim().equals("*")) {
+                                    // groupId + artifactId wildcard
+                                    if (transitives == null) {
+                                        transitives = getDependencyTransitives(dependency);
+                                    }
+                                    for (Dependency transitive : transitives) {
+                                        final Exclusion resolvedExclusion = new Exclusion();
+                                        resolvedExclusion.setGroupId(transitive.getGroupId());
+                                        resolvedExclusion.setArtifactId(transitive.getArtifactId());
+                                        final String resolvedExclusionKey = resolvedExclusion.getGroupId()+":"+resolvedExclusion.getArtifactId();
+                                        resolvedExclusions.putIfAbsent(resolvedExclusionKey, resolvedExclusion);
+                                    }
+                                } else {
+                                    // groupId wildcard
+                                    final String exclusionArtifactId = exclusion.getArtifactId().trim();
+                                    if (transitives == null) {
+                                        transitives = getDependencyTransitives(dependency);
+                                    }
+                                    for (Dependency transitive : transitives) {
+                                        if (transitive.getArtifactId().trim().equals(exclusionArtifactId)) {
+                                            final Exclusion resolvedExclusion = new Exclusion();
+                                            resolvedExclusion.setGroupId(transitive.getGroupId());
+                                            resolvedExclusion.setArtifactId(transitive.getArtifactId());
+                                            final String resolvedExclusionKey = resolvedExclusion.getGroupId()+":"+resolvedExclusion.getArtifactId();
+                                            resolvedExclusions.putIfAbsent(resolvedExclusionKey, resolvedExclusion);
+                                        }
+                                    }
+                                }
+                            } else {
+                                if (exclusion.getArtifactId().trim().equals("*")) {
+                                    // artifactId wildcard
+                                    final String exclusionGroupId = exclusion.getGroupId().trim();
+                                    if (transitives == null) {
+                                        transitives = getDependencyTransitives(dependency);
+                                    }
+                                    for (Dependency transitive : transitives) {
+                                        if (transitive.getGroupId().trim().equals(exclusionGroupId)) {
+                                            final Exclusion resolvedExclusion = new Exclusion();
+                                            resolvedExclusion.setGroupId(transitive.getGroupId());
+                                            resolvedExclusion.setArtifactId(transitive.getArtifactId());
+                                            final String resolvedExclusionKey = resolvedExclusion.getGroupId()+":"+resolvedExclusion.getArtifactId();
+                                            resolvedExclusions.putIfAbsent(resolvedExclusionKey, resolvedExclusion);
+                                        }
+                                    }
+                                } else {
+                                    // no wildcard
+                                    final String exclusionKey = exclusion.getGroupId()+":"+exclusion.getArtifactId();
+                                    resolvedExclusions.putIfAbsent(exclusionKey, exclusion);
+                                }
+                            }
+                        }
+                        // remove managed artifacts from resolved exclusions
+                        final List<Exclusion> filteredExclusions = new ArrayList<>();
+                        for (Map.Entry<String, Exclusion> resolvedExclusionEntry : resolvedExclusions.entrySet()) {
+                            final String resolvedExclusionKey = resolvedExclusionEntry.getKey();
+                            if (managedExclusions.contains(resolvedExclusionKey)) {
                                 if (getLog().isDebugEnabled()) {
-                                    getLog().debug("Removing exclusion "+exclusion.getGroupId().trim()+":"+exclusion.getArtifactId().trim()+" from dependency "+dependency.getManagementKey());
+                                    getLog().debug("Removing exclusion "+resolvedExclusionKey+" from dependency "+dependency.getManagementKey());
                                 }
                                 continue;
                             }
-                            filteredExclusions.add(exclusion);
+                            filteredExclusions.add(resolvedExclusionEntry.getValue());
                         }
+                        // update the dependency exclusions with the filtered ones
                         dependency.setExclusions(filteredExclusions);
                     }
                     break;
@@ -606,7 +665,7 @@ public class BuildBomMojo
         if (managedDependency != null) {
             managedDependency = managedDependency.clone();
             bomManagedDependencies.add(managedDependency);
-            getLog().info("Managed dependency "+managedDependency.getManagementKey()+" added to BOM.");
+            getLog().info("Managed dependency "+managedDependency.getManagementKey()+":"+managedDependency.getVersion()+" added to BOM.");
         }
     }
 
@@ -666,6 +725,7 @@ public class BuildBomMojo
                     transitive.setClassifier(resolvedClassifier);
                 }
                 transitives.add(transitive);
+                getLog().debug("Resolved "+dependency.getManagementKey()+" transitive "+transitive.getManagementKey());
             }
         } catch (ArtifactDescriptorException e) {
             throw new MojoExecutionException(e.getMessage(),e);
