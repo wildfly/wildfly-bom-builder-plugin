@@ -49,11 +49,9 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectDependenciesResolver;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.graph.DependencyFilter;
+import org.eclipse.aether.graph.DependencyNode;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.resolution.ArtifactDescriptorException;
-import org.eclipse.aether.resolution.ArtifactDescriptorRequest;
-import org.eclipse.aether.resolution.ArtifactRequest;
-import org.eclipse.aether.resolution.ArtifactResolutionException;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -438,7 +436,7 @@ public class BuildBomMojo
                     managedDependenciesMap.remove(dependency.getManagementKey());
                 }
                 // retrieve and include the dependency transitives
-                for (Dependency dependencyTransitive : getDependencyTransitives(dependency)) {
+                for (Dependency dependencyTransitive : getDependencyFirstLevelTransitives(dependency)) {
                     if (!managedDependenciesMap.containsKey(dependencyTransitive.getManagementKey()) || isExcludedDependency(dependencyTransitive)) {
                         // skip unmanaged or excluded
                         continue;
@@ -489,53 +487,56 @@ public class BuildBomMojo
                 case UNMANAGED:
                     if (!dependency.getExclusions().isEmpty()) {
                         // resolve wildcards
-                        Collection<? extends Dependency> transitives = null;
                         final Map<String, Exclusion> resolvedExclusions = new HashMap<>();
                         for (Exclusion exclusion : dependency.getExclusions()) {
-                            if (exclusion.getGroupId().trim().equals("*")) {
-                                if (exclusion.getArtifactId().trim().equals("*")) {
+                            if (exclusion.getGroupId().trim().equals(WILDCARD)) {
+                                if (exclusion.getArtifactId().trim().equals(WILDCARD)) {
                                     // groupId + artifactId wildcard
-                                    if (transitives == null) {
-                                        transitives = getDependencyTransitives(dependency);
-                                    }
-                                    for (Dependency transitive : transitives) {
+                                    for (Dependency transitive : getDependencyFirstLevelTransitives(dependency)) {
                                         final Exclusion resolvedExclusion = new Exclusion();
                                         resolvedExclusion.setGroupId(transitive.getGroupId());
                                         resolvedExclusion.setArtifactId(transitive.getArtifactId());
                                         final String resolvedExclusionKey = resolvedExclusion.getGroupId()+":"+resolvedExclusion.getArtifactId();
+                                        getLog().debug("Exclusion "+resolvedExclusionKey+" resolved for *:* exclusion on dependency "+dependency.getManagementKey());
                                         resolvedExclusions.putIfAbsent(resolvedExclusionKey, resolvedExclusion);
                                     }
                                 } else {
                                     // groupId wildcard
                                     final String exclusionArtifactId = exclusion.getArtifactId().trim();
-                                    if (transitives == null) {
-                                        transitives = getDependencyTransitives(dependency);
-                                    }
-                                    for (Dependency transitive : transitives) {
-                                        if (transitive.getArtifactId().trim().equals(exclusionArtifactId)) {
-                                            final Exclusion resolvedExclusion = new Exclusion();
-                                            resolvedExclusion.setGroupId(transitive.getGroupId());
-                                            resolvedExclusion.setArtifactId(transitive.getArtifactId());
-                                            final String resolvedExclusionKey = resolvedExclusion.getGroupId()+":"+resolvedExclusion.getArtifactId();
-                                            resolvedExclusions.putIfAbsent(resolvedExclusionKey, resolvedExclusion);
+                                    final DependencyFilter dependencyFilter = new DependencyFilter() {
+                                        @Override
+                                        public boolean accept(DependencyNode node, List<DependencyNode> parents) {
+                                            final org.eclipse.aether.artifact.Artifact artifact = node.getArtifact();
+                                            return artifact != null && artifact.getArtifactId().trim().equals(exclusionArtifactId);
                                         }
+                                    };
+                                    for (Dependency transitive : getDependencyTransitives(dependency, dependencyFilter)) {
+                                        final Exclusion resolvedExclusion = new Exclusion();
+                                        resolvedExclusion.setGroupId(transitive.getGroupId());
+                                        resolvedExclusion.setArtifactId(transitive.getArtifactId());
+                                        final String resolvedExclusionKey = resolvedExclusion.getGroupId()+":"+resolvedExclusion.getArtifactId();
+                                        getLog().debug("Exclusion "+resolvedExclusionKey+" resolved for *:"+exclusionArtifactId+" exclusion on dependency "+dependency.getManagementKey());
+                                        resolvedExclusions.putIfAbsent(resolvedExclusionKey, resolvedExclusion);
                                     }
                                 }
                             } else {
-                                if (exclusion.getArtifactId().trim().equals("*")) {
+                                if (exclusion.getArtifactId().trim().equals(WILDCARD)) {
                                     // artifactId wildcard
                                     final String exclusionGroupId = exclusion.getGroupId().trim();
-                                    if (transitives == null) {
-                                        transitives = getDependencyTransitives(dependency);
-                                    }
-                                    for (Dependency transitive : transitives) {
-                                        if (transitive.getGroupId().trim().equals(exclusionGroupId)) {
-                                            final Exclusion resolvedExclusion = new Exclusion();
-                                            resolvedExclusion.setGroupId(transitive.getGroupId());
-                                            resolvedExclusion.setArtifactId(transitive.getArtifactId());
-                                            final String resolvedExclusionKey = resolvedExclusion.getGroupId()+":"+resolvedExclusion.getArtifactId();
-                                            resolvedExclusions.putIfAbsent(resolvedExclusionKey, resolvedExclusion);
+                                    final DependencyFilter dependencyFilter = new DependencyFilter() {
+                                        @Override
+                                        public boolean accept(DependencyNode node, List<DependencyNode> parents) {
+                                            final org.eclipse.aether.artifact.Artifact artifact = node.getArtifact();
+                                            return artifact != null && artifact.getGroupId().trim().equals(exclusionGroupId);
                                         }
+                                    };
+                                    for (Dependency transitive : getDependencyTransitives(dependency, dependencyFilter)) {
+                                        final Exclusion resolvedExclusion = new Exclusion();
+                                        resolvedExclusion.setGroupId(transitive.getGroupId());
+                                        resolvedExclusion.setArtifactId(transitive.getArtifactId());
+                                        final String resolvedExclusionKey = resolvedExclusion.getGroupId()+":"+resolvedExclusion.getArtifactId();
+                                        getLog().debug("Exclusion "+resolvedExclusionKey+" resolved for "+exclusionGroupId+":* exclusion on dependency "+dependency.getManagementKey());
+                                        resolvedExclusions.putIfAbsent(resolvedExclusionKey, resolvedExclusion);
                                     }
                                 } else {
                                     // no wildcard
@@ -630,9 +631,9 @@ public class BuildBomMojo
             }
         }
         pomModel.getDependencyManagement().setDependencies(bomManagedDependencies);
-        getLog().info("Added " + pomModel.getDependencyManagement().getDependencies().size() + " managed dependencies to BOM.");
+        getLog().info("Added " + pomModel.getDependencyManagement().getDependencies().size() + " managed dependencies to the BOM.");
         pomModel.setDependencies(bomDependencies);
-        getLog().info("Added " + pomModel.getDependencies().size() + " dependencies to BOM.");
+        getLog().info("Added " + pomModel.getDependencies().size() + " dependencies to the BOM.");
     }
 
     private void addBuilderManagedDependency(Dependency dependency, List<Dependency> orderedManagedDependencies, Map<String, Dependency> managedDependenciesMap, List<String> includedManagedDependencies, List<String> includedManagedDependenciesWithTransitives, Set<String> managedExclusions) {
@@ -665,7 +666,7 @@ public class BuildBomMojo
         if (managedDependency != null) {
             managedDependency = managedDependency.clone();
             bomManagedDependencies.add(managedDependency);
-            getLog().info("Managed dependency "+managedDependency.getManagementKey()+":"+managedDependency.getVersion()+" added to BOM.");
+            getLog().info("Managed dependency "+managedDependency.getManagementKey()+":"+managedDependency.getVersion()+" added to the BOM.");
         }
     }
 
@@ -684,7 +685,7 @@ public class BuildBomMojo
             bomDependency.setScope(null);
         }
         bomDependencies.add(bomDependency);
-        getLog().info("Dependency "+bomDependency.getManagementKey()+" added to BOM.");
+        getLog().info("Dependency "+bomDependency.getManagementKey()+":"+bomDependency.getVersion()+" added to the BOM.");
     }
 
     private boolean isExcludedDependency(Dependency dependency) {
@@ -706,33 +707,48 @@ public class BuildBomMojo
         return getDependencyMatch(dependency, includeDependencies);
     }
 
-    private Collection<? extends Dependency> getDependencyTransitives(Dependency dependency) throws MojoExecutionException {
-        final List<Dependency> transitives = new ArrayList<>();
-        try {
-            // ensure artifact is resolved
-            final org.eclipse.aether.artifact.Artifact artifact = new org.eclipse.aether.artifact.DefaultArtifact(dependency.getGroupId(), dependency.getArtifactId(), dependency.getClassifier(), dependency.getType(), dependency.getVersion());
-            if (repositorySystem.resolveArtifact(repositorySystemSession, new ArtifactRequest().setRepositories(repositories).setArtifact(artifact)).isMissing()) {
-                throw new MojoExecutionException("Artifact for dependency "+dependency.getManagementKey()+" is missing, unable to retrieve dependencies");
+    private Collection<? extends Dependency> getDependencyFirstLevelTransitives(final Dependency dependency) throws MojoExecutionException {
+        final DependencyFilter dependencyFilter = new DependencyFilter() {
+            @Override
+            public boolean accept(DependencyNode node, List<DependencyNode> parents) {
+                // only 1st level dependencies accepted
+                return parents.size() == 1;
             }
-            // retrieve its transitives
-            for (org.eclipse.aether.graph.Dependency aDependency : repositorySystem.readArtifactDescriptor(repositorySystemSession, new ArtifactDescriptorRequest().setRepositories(repositories).setArtifact(artifact)).getDependencies()) {
-                final Dependency transitive = new Dependency();
-                transitive.setGroupId(trim(aDependency.getArtifact().getGroupId()));
-                transitive.setArtifactId(trim(aDependency.getArtifact().getArtifactId()));
-                transitive.setType(trim(aDependency.getArtifact().getExtension()));
+        };
+        return getDependencyTransitives(dependency, dependencyFilter);
+    }
+
+    private Collection<? extends Dependency> getDependencyTransitives(final Dependency dependency, final DependencyFilter filter) throws MojoExecutionException {
+        final MavenProject projectClone = mavenProject.clone();
+        projectClone.setDependencyArtifacts(null);
+        projectClone.getDependencyManagement().setDependencies(new ArrayList<>());
+        final Dependency managedDependencyClone = dependency.clone();
+        managedDependencyClone.setExclusions(null);
+        // replace any import scopes with compile
+        if ("import".equals(managedDependencyClone.getScope())) {
+            managedDependencyClone.setScope("compile");
+        }
+        projectClone.getDependencyManagement().addDependency(managedDependencyClone);
+        projectClone.setDependencies(new ArrayList<>());
+        projectClone.getDependencies().add(managedDependencyClone);
+        final List<Dependency> resolvedDependencies = new ArrayList<>();
+        try {
+            for (org.eclipse.aether.graph.Dependency aDependency : projectDependenciesResolver.resolve(new DefaultDependencyResolutionRequest(projectClone, repositorySystemSession).setResolutionFilter(filter)).getDependencies()) {
+                final Dependency resolvedDependency = new Dependency();
+                resolvedDependency.setGroupId(trim(aDependency.getArtifact().getGroupId()));
+                resolvedDependency.setArtifactId(trim(aDependency.getArtifact().getArtifactId()));
+                resolvedDependency.setType(trim(aDependency.getArtifact().getExtension()));
                 String resolvedClassifier = trim(aDependency.getArtifact().getClassifier());
                 if (resolvedClassifier != null && !resolvedClassifier.isEmpty()) {
-                    transitive.setClassifier(resolvedClassifier);
+                    resolvedDependency.setClassifier(resolvedClassifier);
                 }
-                transitives.add(transitive);
-                getLog().debug("Resolved "+dependency.getManagementKey()+" transitive "+transitive.getManagementKey());
+                resolvedDependency.setVersion(aDependency.getArtifact().getVersion());
+                resolvedDependencies.add(resolvedDependency);
             }
-        } catch (ArtifactDescriptorException e) {
-            throw new MojoExecutionException(e.getMessage(),e);
-        } catch (ArtifactResolutionException e) {
+        } catch (Throwable e) {
             throw new MojoExecutionException(e.getMessage(),e);
         }
-        return transitives;
+        return resolvedDependencies;
     }
 
     private boolean isImportedDependency(Dependency dependency) {
