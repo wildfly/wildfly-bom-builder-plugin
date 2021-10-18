@@ -712,7 +712,7 @@ public class BuildBomMojo
             @Override
             public boolean accept(DependencyNode node, List<DependencyNode> parents) {
                 // only 1st level dependencies accepted
-                return parents.size() == 1;
+                return parents.size() == 2;
             }
         };
         return getDependencyTransitives(dependency, dependencyFilter);
