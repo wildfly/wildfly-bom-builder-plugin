@@ -413,7 +413,7 @@ public class BuildBomMojo
         pomModel.setDependencyManagement(new DependencyManagement());
         // gather initial managed deps from source
         final Map<String, Dependency> managedDependenciesMap = new TreeMap<>();
-        final List<Dependency> orderedManagedDependencies = new ArrayList<>();
+        final List<String> orderedManagedDependencies = new ArrayList<>();
         final Set<String> managedExclusions = new HashSet<>();
         final List<String> includedManagedDependencies = new ArrayList<>();
         final List<String> includedManagedDependenciesWithTransitives = new ArrayList<>();
@@ -588,7 +588,10 @@ public class BuildBomMojo
                 // need to resolve transitives
                 final MavenProject clone = mavenProject.clone();
                 clone.setDependencyArtifacts(null);
-                clone.getDependencyManagement().setDependencies(new ArrayList<>(orderedManagedDependencies));
+                clone.getDependencyManagement().setDependencies(new ArrayList<>());
+                for (String orderedManagedDependencyKey : orderedManagedDependencies) {
+                    clone.getDependencyManagement().getDependencies().add(managedDependenciesMap.get(orderedManagedDependencyKey));
+                }
                 clone.setDependencies(new ArrayList<>());
                 for (String managementKey : includedManagedDependencies) {
                     final Dependency managedDependencyClone = managedDependenciesMap.get(managementKey).clone();
@@ -640,7 +643,8 @@ public class BuildBomMojo
             }
         } else {
             // if includeDependencies is not defined... add all managed deps to BOM
-            for (Dependency managedDependency : orderedManagedDependencies) {
+            for (String managedDependencyKey : orderedManagedDependencies) {
+                final Dependency managedDependency = managedDependenciesMap.get(managedDependencyKey);
                 addBomManagedDependency(managedDependency, bomManagedDependencies);
                 if (bomWithDependencies) {
                     addBomDependency(managedDependency, bomDependencies);
@@ -653,11 +657,11 @@ public class BuildBomMojo
         getLog().info("Added " + pomModel.getDependencies().size() + " dependencies to the BOM.");
     }
 
-    private void addBuilderManagedDependency(Dependency dependency, List<Dependency> orderedManagedDependencies, Map<String, Dependency> managedDependenciesMap, List<String> includedManagedDependencies, List<String> includedManagedDependenciesWithTransitives, Set<String> managedExclusions) {
+    private void addBuilderManagedDependency(Dependency dependency, List<String> orderedManagedDependencies, Map<String, Dependency> managedDependenciesMap, List<String> includedManagedDependencies, List<String> includedManagedDependenciesWithTransitives, Set<String> managedExclusions) {
         dependency = dependency.clone();
         final String managementKey = dependency.getManagementKey();
         managedDependenciesMap.put(managementKey, dependency);
-        orderedManagedDependencies.add(dependency);
+        orderedManagedDependencies.add(managementKey);
         final IncludeDependency includedDependency = getIncludedDependency(dependency);
         if (includedDependency != null) {
             final boolean transitive = includedDependency.getTransitive() == null ? includeTransitives : includedDependency.getTransitive();
