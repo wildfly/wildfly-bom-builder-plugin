@@ -23,6 +23,12 @@
 
 package org.wildfly.plugins.bombuilder;
 
+import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
+import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.wildfly.channel.Channel;
+import org.wildfly.channel.ChannelSession;
+import org.wildfly.channel.UnresolvedMavenArtifactException;
+import org.wildfly.channel.maven.VersionResolverFactory;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
@@ -64,9 +70,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Function;
 
 import static org.codehaus.plexus.util.StringUtils.defaultString;
 import static org.codehaus.plexus.util.StringUtils.trim;
+import static org.wildfly.channel.maven.VersionResolverFactory.DEFAULT_REPOSITORY_MAPPER;
 
 /**
  * Build a BOM based on the dependencies in a GAV
@@ -224,6 +232,10 @@ public class BuildBomMojo
 
     private final PomDependencyVersionsTransformer versionsTransformer;
     private final ModelWriter modelWriter;
+
+
+    @Parameter(alias = "channels", required = false)
+    private List<ChannelConfiguration> channels;
 
     public BuildBomMojo() {
         this(new ModelWriter(), new PomDependencyVersionsTransformer());
@@ -417,12 +429,35 @@ public class BuildBomMojo
         final Set<String> managedExclusions = new HashSet<>();
         final List<String> includedManagedDependencies = new ArrayList<>();
         final List<String> includedManagedDependenciesWithTransitives = new ArrayList<>();
+        ChannelSession channelSession = null;
+        if (this.channels != null) {
+            DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
+            final List<Channel> channels = new ArrayList<>();
+            session.setLocalRepositoryManager(repositorySystemSession.getLocalRepositoryManager());
+            session.setOffline(repositorySystemSession.isOffline());
+            Map<String, RemoteRepository> mapping = new HashMap<>();
+            for (RemoteRepository r : repositories) {
+                mapping.put(r.getId(), r);
+            }
+            for (ChannelConfiguration channelConfiguration : this.channels) {
+                channels.add(channelConfiguration.toChannel(repositories));
+            }
+            Function<org.wildfly.channel.Repository, RemoteRepository> mapper = r -> {
+                RemoteRepository rep = mapping.get(r.getId());
+                if (rep == null) {
+                    rep = DEFAULT_REPOSITORY_MAPPER.apply(r);
+                }
+                return rep;
+            };
+            VersionResolverFactory factory = new VersionResolverFactory(repositorySystem, session, mapper);
+            channelSession = new ChannelSession(channels, factory);
+        }
         for (Dependency dependency : mavenProject.getDependencyManagement().getDependencies()) {
             if (isExcludedDependency(dependency) && getIncludedTransitiveDependency(dependency) == null) {
                 getLog().info("Skipping dependency excluded by config: "+dependency.getManagementKey());
                 continue;
             }
-            addBuilderManagedDependency(dependency, orderedManagedDependencies, managedDependenciesMap, includedManagedDependencies, includedManagedDependenciesWithTransitives, managedExclusions);
+            addBuilderManagedDependency(dependency, orderedManagedDependencies, managedDependenciesMap, includedManagedDependencies, includedManagedDependenciesWithTransitives, managedExclusions, channelSession);
         }
         // build a dep management clone with no exclusions, this just enforces versions and should be used when resolving transitives for a single dependency
         final List<Dependency> dependencyManagementWithoutExclusions = new ArrayList<>();
@@ -477,7 +512,7 @@ public class BuildBomMojo
                     throw new MojoExecutionException("Dependency "+dependency.getManagementKey()+" version ref "+dependency.getVersion()+" not found");
                 }
                 dependency.setVersion(versionRef.getVersion());
-                addBuilderManagedDependency(dependency, orderedManagedDependencies, managedDependenciesMap, includedManagedDependencies, includedManagedDependenciesWithTransitives, managedExclusions);
+                addBuilderManagedDependency(dependency, orderedManagedDependencies, managedDependenciesMap, includedManagedDependencies, includedManagedDependenciesWithTransitives, managedExclusions, channelSession);
             }
         }
         // verify all included dependencies were found
@@ -657,9 +692,20 @@ public class BuildBomMojo
         getLog().info("Added " + pomModel.getDependencies().size() + " dependencies to the BOM.");
     }
 
-    private void addBuilderManagedDependency(Dependency dependency, List<String> orderedManagedDependencies, Map<String, Dependency> managedDependenciesMap, List<String> includedManagedDependencies, List<String> includedManagedDependenciesWithTransitives, Set<String> managedExclusions) {
+    private void addBuilderManagedDependency(Dependency dependency, List<String> orderedManagedDependencies, Map<String, Dependency> managedDependenciesMap, List<String> includedManagedDependencies, List<String> includedManagedDependenciesWithTransitives, Set<String> managedExclusions, ChannelSession channelSession) {
         dependency = dependency.clone();
         final String managementKey = dependency.getManagementKey();
+        // if channels are configured then use them to resolve the dependency, to obtain any version update
+        if (channelSession != null) {
+            try {
+                getLog().debug("Resolving dependency "+managementKey+"'s latest version on channels... (current = "+dependency.getVersion()+")");
+                final String latestVersion = channelSession.findLatestMavenArtifactVersion(dependency.getGroupId(), dependency.getArtifactId(), dependency.getType(), dependency.getClassifier(), dependency.getVersion());
+                getLog().debug("Resolved dependency "+managementKey+"'s latest version on channels: "+latestVersion);
+                dependency.setVersion(latestVersion);
+            } catch (UnresolvedMavenArtifactException e) {
+                getLog().debug("Failed to resolve dependency "+managementKey+" on channels", e);
+            }
+        }
         managedDependenciesMap.put(managementKey, dependency);
         orderedManagedDependencies.add(managementKey);
         final IncludeDependency includedDependency = getIncludedDependency(dependency);
