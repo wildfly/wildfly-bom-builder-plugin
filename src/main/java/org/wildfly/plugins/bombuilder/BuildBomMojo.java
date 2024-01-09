@@ -183,6 +183,12 @@ public class BuildBomMojo
     private boolean bomWithDependencies = false;
 
     /**
+     * A list of exclusions which should be ignored when defining the exclusions for included dependencies.
+     */
+    @Parameter(alias = "ignored-exclusions")
+    private List<Exclusion> ignoredExclusions;
+
+    /**
      * Which dependency exclusions, present in the source POM, should be included in the BOM:
      *
      *  NONE - no exclusion should be inherited
@@ -467,7 +473,9 @@ public class BuildBomMojo
                 Exclusion exclusion = new Exclusion();
                 exclusion.setGroupId(excludedDependency.getGroupId());
                 exclusion.setArtifactId(excludedDependency.getArtifactId());
-                dependenciesExcludedFromResolving.add(exclusion);
+                if (!isIgnoredExclusion(exclusion)) {
+                    dependenciesExcludedFromResolving.add(exclusion);
+                }
             }
         }
         // include transitives of dependencies
@@ -595,7 +603,7 @@ public class BuildBomMojo
                         final List<Exclusion> filteredExclusions = new ArrayList<>();
                         for (Map.Entry<String, Exclusion> resolvedExclusionEntry : resolvedExclusions.entrySet()) {
                             final String resolvedExclusionKey = resolvedExclusionEntry.getKey();
-                            if (managedExclusions.contains(resolvedExclusionKey)) {
+                            if (managedExclusions.contains(resolvedExclusionKey) || isIgnoredExclusion(resolvedExclusionEntry.getValue())) {
                                 getLog().debug("Removing exclusion "+resolvedExclusionKey+" from dependency "+dependency.getManagementKey());
                                 continue;
                             }
@@ -860,6 +868,16 @@ public class BuildBomMojo
                 getLog().debug("Managed dependency " + dependency.getManagementKey() + " matches dependency import " + dependencyMatch.getManagementKey());
             }
             return true;
+        }
+        return false;
+    }
+
+    private boolean isIgnoredExclusion(final Exclusion exclusion) {
+        for (Exclusion ignoredExclusion : ignoredExclusions) {
+            if (ignoredExclusion.getArtifactId().equals(exclusion.getArtifactId()) &&
+                    ignoredExclusion.getGroupId().equals(exclusion.getGroupId())) {
+                return true;
+            }
         }
         return false;
     }
