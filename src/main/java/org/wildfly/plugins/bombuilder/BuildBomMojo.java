@@ -188,12 +188,6 @@ public class BuildBomMojo
     @Parameter(alias = "ignored-exclusions")
     private List<Exclusion> ignoredExclusions;
 
-    public enum InheritExclusions {
-        ALL,
-        NONE,
-        UNMANAGED
-    }
-
     /**
      * Which dependency exclusions, present in the source POM, should be included in the BOM:
      *
@@ -538,7 +532,7 @@ public class BuildBomMojo
         }
         // process managed dep exclusions
         for (Dependency dependency : managedDependenciesMap.values()) {
-            switch (inheritExclusions) {
+            switch (getInheritExclusions(dependency)) {
                 case ALL:
                     break;
                 case NONE:
@@ -714,7 +708,7 @@ public class BuildBomMojo
                 getLog().debug("Failed to resolve dependency "+managementKey+" on channels", e);
             }
         }
-        managedDependenciesMap.put(managementKey, dependency);
+        managedDependenciesMap.put(managementKey, resolveDependency(dependency));
         orderedManagedDependencies.add(managementKey);
         final IncludeDependency includedDependency = getIncludedDependency(dependency);
         if (includedDependency != null) {
@@ -732,7 +726,7 @@ public class BuildBomMojo
             includedManagedDependencies.add(managementKey);
             getLog().debug("Dependency imported by config: "+managementKey);
         }
-        if (inheritExclusions == InheritExclusions.UNMANAGED) {
+        if (getInheritExclusions(dependency) == InheritExclusions.UNMANAGED) {
             managedExclusions.add(dependency.getGroupId() + ":" + dependency.getArtifactId());
         }
     }
@@ -774,12 +768,51 @@ public class BuildBomMojo
         return false;
     }
 
+    private InheritExclusions getInheritExclusions(final Dependency dependency) {
+        if (dependency instanceof IncludeDependency) {
+            final InheritExclusions depInheritExclusion = ((IncludeDependency) dependency).getInheritExclusions();
+            if (depInheritExclusion != null) {
+                return depInheritExclusion;
+            }
+        }
+        return inheritExclusions;
+    }
+
     private IncludeDependency getIncludedTransitiveDependency(Dependency dependency) {
         return getDependencyMatch(dependency, includeDependenciesTransitives);
     }
 
     private IncludeDependency getIncludedDependency(Dependency dependency) {
         return getDependencyMatch(dependency, includeDependencies);
+    }
+
+    private Dependency resolveDependency(final Dependency dependency) {
+        if (dependency instanceof IncludeDependency) {
+            return dependency;
+        }
+        final IncludeDependency includeDependency = getIncludedDependency(dependency);
+        if (includeDependency == null) {
+            return dependency;
+        }
+        if (includeDependency.getClassifier() == null) {
+            includeDependency.setClassifier(dependency.getClassifier());
+        }
+        if (includeDependency.getOptional() == null) {
+            includeDependency.setOptional(dependency.getOptional());
+        }
+        if (includeDependency.getScope() == null) {
+            includeDependency.setScope(dependency.getScope());
+        }
+        if (includeDependency.getSystemPath() == null) {
+            includeDependency.setSystemPath(dependency.getSystemPath());
+        }
+        if (includeDependency.getType() == null) {
+            includeDependency.setType(dependency.getType());
+        }
+        if (includeDependency.getVersion() == null) {
+            includeDependency.setVersion(dependency.getVersion());
+        }
+        return includeDependency;
     }
 
     private Collection<? extends Dependency> getDependencyFirstLevelTransitives(final Dependency dependency, List<Exclusion> dependenciesExcludedFromResolving, List<Dependency> dependencyManagementWithoutExclusions) throws MojoExecutionException {
