@@ -28,6 +28,7 @@ import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.wildfly.channel.Channel;
 import org.wildfly.channel.ChannelSession;
 import org.wildfly.channel.UnresolvedMavenArtifactException;
+import org.wildfly.channel.VersionResult;
 import org.wildfly.channel.maven.VersionResolverFactory;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
@@ -704,9 +705,9 @@ public class BuildBomMojo
         if (channelSession != null) {
             try {
                 getLog().debug("Resolving dependency "+managementKey+"'s latest version on channels... (current = "+dependency.getVersion()+")");
-                final String latestVersion = channelSession.findLatestMavenArtifactVersion(dependency.getGroupId(), dependency.getArtifactId(), dependency.getType(), dependency.getClassifier(), dependency.getVersion());
+                final VersionResult latestVersion = channelSession.findLatestMavenArtifactVersion(dependency.getGroupId(), dependency.getArtifactId(), dependency.getType(), dependency.getClassifier(), dependency.getVersion());
                 getLog().debug("Resolved dependency "+managementKey+"'s latest version on channels: "+latestVersion);
-                dependency.setVersion(latestVersion);
+                dependency.setVersion(latestVersion.getVersion());
             } catch (UnresolvedMavenArtifactException e) {
                 getLog().debug("Failed to resolve dependency "+managementKey+" on channels", e);
             }
