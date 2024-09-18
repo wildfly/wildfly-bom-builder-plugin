@@ -48,7 +48,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <version.mavenPluginTools>3.12.0</version.mavenPluginTools>
     <version.plexusUtils>4.0.0</version.plexusUtils>
-    <version.wildFlyChannels>1.0.0.Final</version.wildFlyChannels>
+    <version.wildFlyChannels>1.1.0.Final</version.wildFlyChannels>
   </properties>
 
   <dependencyManagement>
@@ -110,6 +110,7 @@
           <version>${version.mavenPluginTools}</version>
           <configuration>
             <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
+            <goalPrefix>wildfly-bom-builder</goalPrefix>
           </configuration>
           <executions>
             <execution>
