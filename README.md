@@ -101,6 +101,15 @@ Example usage:
                                     <exclusionArtifactId>jaxb-api</exclusionArtifactId>
                                 </exclusion>
                             </addExclusions>
+                            <!-- Override the dependencies with new scope -->
+                            <scopeOverrides>
+                                <scopeOverride>
+                                    <groupId>*</groupId>
+                                    <artifactId>*</artifactId>
+                                    <scope>compile</scope>
+                                    <newScope>runtime</newScope>
+                                </scopeOverride>
+                            </scopeOverrides>
                         </configuration>
                     </execution>
                 </executions>

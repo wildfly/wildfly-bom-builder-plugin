@@ -209,6 +209,9 @@ public class BuildBomMojo
     @Parameter
     private Set<String> includeRepositories;
 
+    @Parameter
+    private List<ScopeOverride> scopeOverrides;
+
     /**
      * The current project
      */
@@ -733,10 +736,18 @@ public class BuildBomMojo
 
     private void addBomManagedDependency(Dependency managedDependency, List<Dependency> bomManagedDependencies) {
         if (managedDependency != null) {
-            managedDependency = managedDependency.clone();
+            managedDependency = applyScopeOverride(managedDependency.clone());
             bomManagedDependencies.add(managedDependency);
             getLog().info("Managed dependency "+managedDependency.getManagementKey()+":"+managedDependency.getVersion()+" added to the BOM.");
         }
+    }
+
+    private Dependency applyScopeOverride(final Dependency dependency) {
+        final ScopeOverride override = getDependencyMatch(dependency, scopeOverrides);
+        if (override != null) {
+            dependency.setScope(override.getNewScope());
+        }
+        return dependency;
     }
 
     private void addBomDependency(Dependency dependency, List<Dependency> bomDependencies) {
@@ -747,7 +758,7 @@ public class BuildBomMojo
             // do not add imports
             return;
         }
-        final Dependency bomDependency = dependency.clone();
+        final Dependency bomDependency = applyScopeOverride(dependency.clone());
         bomDependency.setExclusions(null);
         bomDependency.setVersion(null);
         if ("compile".equals(bomDependency.getScope())) {
@@ -922,6 +933,13 @@ public class BuildBomMojo
                 if (match.getClassifier() == null || !classifier.equals(match.getClassifier())) {
                     return false;
                 }
+            }
+        }
+        final String matchScope = trim(match.getScope());
+        if (matchScope != null && !matchScope.isEmpty() && !"*".equals(matchScope)) {
+            String scope = defaultString(trim(dependency.getScope()), "compile");
+            if (!scope.equals(match.getScope())) {
+                return false;
             }
         }
         return true;
