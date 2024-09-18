@@ -884,10 +884,12 @@ public class BuildBomMojo
     }
 
     private boolean isIgnoredExclusion(final Exclusion exclusion) {
-        for (Exclusion ignoredExclusion : ignoredExclusions) {
-            if (ignoredExclusion.getArtifactId().equals(exclusion.getArtifactId()) &&
-                    ignoredExclusion.getGroupId().equals(exclusion.getGroupId())) {
-                return true;
+        if (ignoredExclusions != null) {
+            for (Exclusion ignoredExclusion : ignoredExclusions) {
+                if (ignoredExclusion.getArtifactId().equals(exclusion.getArtifactId()) &&
+                        ignoredExclusion.getGroupId().equals(exclusion.getGroupId())) {
+                    return true;
+                }
             }
         }
         return false;
