@@ -213,6 +213,9 @@ public class BuildBomMojo
     @Parameter
     private List<ScopeOverride> scopeOverrides;
 
+    @Parameter(defaultValue = "DEPENDENCY_MANAGEMENT")
+    private DependencySource dependencySource;
+
     /**
      * The current project
      */
@@ -422,8 +425,19 @@ public class BuildBomMojo
         mavenProject.addAttachedArtifact( pomArtifact );
     }
 
+    private List<Dependency> getDependencies() {
+        if (dependencySource == DependencySource.PROJECT_DEPENDENCIES) {
+            return mavenProject.getDependencies();
+        }
+        else if (mavenProject.getDependencyManagement() != null) {
+            return mavenProject.getDependencyManagement().getDependencies();
+        }
+        return null;
+    }
+
     private void addDependencyManagement(Model pomModel) throws MojoExecutionException {
-        if (mavenProject.getDependencyManagement() == null || mavenProject.getDependencyManagement().getDependencies() == null) {
+        final List<Dependency> dependencies = getDependencies();
+        if (dependencies == null) {
             return;
         }
         pomModel.setDependencyManagement(new DependencyManagement());
@@ -456,7 +470,7 @@ public class BuildBomMojo
             VersionResolverFactory factory = new VersionResolverFactory(repositorySystem, session, mapper);
             channelSession = new ChannelSession(channels, factory);
         }
-        for (Dependency dependency : mavenProject.getDependencyManagement().getDependencies()) {
+        for (Dependency dependency : dependencies) {
             if (isExcludedDependency(dependency) && getIncludedTransitiveDependency(dependency) == null) {
                 getLog().info("Skipping dependency excluded by config: "+dependency.getManagementKey());
                 continue;
