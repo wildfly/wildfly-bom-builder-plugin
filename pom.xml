@@ -48,7 +48,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <version.mavenPluginTools>3.15.0</version.mavenPluginTools>
     <version.plexusUtils>4.0.1</version.plexusUtils>
-    <version.wildFlyChannels>1.1.0.Final</version.wildFlyChannels>
+    <version.wildFlyChannels>1.2.0.Final</version.wildFlyChannels>
   </properties>
 
   <dependencyManagement>
