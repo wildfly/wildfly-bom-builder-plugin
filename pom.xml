@@ -128,6 +128,31 @@
             </execution>
           </executions>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-invoker-plugin</artifactId>
+          <version>3.2.2</version>
+          <configuration>
+            <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+            <debug>true</debug>
+            <settingsFile>src/it/settings.xml</settingsFile>
+            <localRepositoryPath>${project.build.directory}/local-repo</localRepositoryPath>
+            <pomIncludes>
+              <pomInclude>*/pom.xml</pomInclude>
+            </pomIncludes>
+            <projectsDirectory>src/it</projectsDirectory>
+            <postBuildHookScript>verify</postBuildHookScript>
+          </configuration>
+          <executions>
+            <execution>
+              <id>run-invoker</id>
+              <goals>
+                <goal>run</goal>
+              </goals>
+              <phase>integration-test</phase>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>

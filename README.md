@@ -110,6 +110,8 @@ Example usage:
                                     <newScope>runtime</newScope>
                                 </scopeOverride>
                             </scopeOverrides>
+                            <!-- Choose dependency source DEPENDENCY_MANAGEMENT (default) or PROJECT_DEPENDENCIES for the bom -->
+                            <dependencySource>DEPENDENCY_MANAGEMENT</dependencySource>
                         </configuration>
                     </execution>
                 </executions>
