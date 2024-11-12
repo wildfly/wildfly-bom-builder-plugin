@@ -27,7 +27,7 @@
 
   <groupId>org.wildfly.plugins</groupId>
   <artifactId>wildfly-bom-builder-plugin</artifactId>
-  <version>2.0.8.Final-SNAPSHOT</version>
+  <version>2.0.8.Final</version>
   <packaging>maven-plugin</packaging>
 
     <licenses>
@@ -154,6 +154,7 @@
           <execution>
             <id>run-invoker</id>
             <goals>
+              <goal>install</goal>
               <goal>run</goal>
             </goals>
           </execution>
