@@ -131,7 +131,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-invoker-plugin</artifactId>
-          <version>3.2.2</version>
+          <version>3.8.1</version>
           <configuration>
             <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
             <debug>true</debug>
@@ -143,18 +143,23 @@
             <projectsDirectory>src/it</projectsDirectory>
             <postBuildHookScript>verify</postBuildHookScript>
           </configuration>
-          <executions>
-            <execution>
-              <id>run-invoker</id>
-              <goals>
-                <goal>run</goal>
-              </goals>
-              <phase>integration-test</phase>
-            </execution>
-          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-invoker-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>run-invoker</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 
 </project>
