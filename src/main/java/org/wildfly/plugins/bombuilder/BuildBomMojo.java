@@ -180,7 +180,7 @@ public class BuildBomMojo
     /**
      * Set to {@code true} to build a BOM with dependencies. If the includeDependencies param is specified then only the included dependencies are added to the BOM's dependencies, otherwise all managed dependencies are added.
      */
-    @Parameter
+    @Parameter(property = "bomWithDependencies")
     private boolean bomWithDependencies = false;
 
     /**
