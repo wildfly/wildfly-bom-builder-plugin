@@ -89,7 +89,7 @@ public class BuildBomMojo
     /**
      * Set the parent of the generated bom
      */
-    @Parameter
+    @Parameter(alias = "bomParent")
     private Parent parent;
 
     /**
@@ -125,7 +125,7 @@ public class BuildBomMojo
     /**
      * Set to {@code true} to generate the licenses
      */
-    @Parameter
+    @Parameter(alias = "generateLicenses")
     private boolean licenses = false;
 
     /**
