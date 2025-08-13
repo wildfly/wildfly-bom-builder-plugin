@@ -22,21 +22,37 @@
   <parent>
     <groupId>org.jboss</groupId>
     <artifactId>jboss-parent</artifactId>
-    <version>48</version>
+    <version>50</version>
   </parent>
 
   <groupId>org.wildfly.plugins</groupId>
   <artifactId>wildfly-bom-builder-plugin</artifactId>
   <version>2.0.9.Final-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
+  <description>Maven plugin that builds WildFly BOMs</description>
+  <url>https://github.com/wildfly/wildfly-bom-builder-plugin</url>
 
-    <licenses>
-        <license>
-            <name>Apache License 2.0</name>
-            <url>http://repository.jboss.org/licenses/apache-2.0.txt</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
+  <licenses>
+      <license>
+          <name>Apache License 2.0</name>
+          <url>http://repository.jboss.org/licenses/apache-2.0.txt</url>
+          <distribution>repo</distribution>
+      </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>emmartins</id>
+      <name>Eduardo Martins</name>
+      <url>https://github.com/emmartins</url>
+    </developer>
+    <developer>
+      <id>wildfly.org</id>
+      <name>WildFly Community</name>
+      <organization>wildfly.org</organization>
+      <organizationUrl>http://wildfly.org</organizationUrl>
+    </developer>
+  </developers>
 
   <scm>
     <connection>scm:git:git@github.com:wildfly/wildfly-bom-builder-plugin.git</connection>
@@ -45,6 +61,11 @@
   </scm>
 
   <properties>
+
+    <!-- Repository Deployment Settings -->
+    <nexus.repository.staging>wildfly-staging</nexus.repository.staging>
+    <nexus.staging.tag>wildfly-bom-builder-plugin-${project.version}</nexus.staging.tag>
+
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <version.mavenPluginTools>3.15.1</version.mavenPluginTools>
     <version.plexusUtils>4.0.2</version.plexusUtils>
