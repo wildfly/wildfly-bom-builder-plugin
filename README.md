@@ -1,5 +1,5 @@
 # wildfly-bom-builder-plugin
-Maven plugin that builds Wildfly BOMs
+Maven plugin that builds WildFly BOMs
 
 Inspired by https://github.com/jboss/bom-builder-maven-plugin this plugin inspects the available dependency management entries and outputs them to a BOM file.
 

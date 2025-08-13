@@ -1,7 +1,7 @@
 WildFly BOM Builder Plugin Contributing Guide
 =============================================
 
-WildFly BOM Builder Plugin is a maven plugin that builds Wildfly BOMs.
+WildFly BOM Builder Plugin is a maven plugin that builds WildFly BOMs.
 
 Basic Steps
 -----------
