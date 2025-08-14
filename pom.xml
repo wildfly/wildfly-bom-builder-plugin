@@ -27,7 +27,7 @@
 
   <groupId>org.wildfly.plugins</groupId>
   <artifactId>wildfly-bom-builder-plugin</artifactId>
-  <version>2.0.10.Final-SNAPSHOT</version>
+  <version>2.0.10.Final</version>
   <packaging>maven-plugin</packaging>
   <name>WildFly BOM Builder Maven Plugin</name>
   <description>Maven plugin that builds WildFly BOMs</description>
