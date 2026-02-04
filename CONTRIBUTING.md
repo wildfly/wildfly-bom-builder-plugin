@@ -56,63 +56,36 @@ Here are the steps in detail:
 License Information and Contributor Agreement
 ---------------------------------------------
 
-  WildFly BOM Builder Plugin is licensed under the Apache License 2.0.
+  All contributions to this repository are licensed under the [Apache License](https://www.apache.org/licenses/LICENSE-2.0), version 2.0 or later, or, if another license is specified as governing the file or directory being modified, such other license.
+
+  All contributions are subject to the [Developer Certificate of Origin (DCO)](https://developercertificate.org/).
+  The DCO text is also included verbatim in the [dco.txt](dco.txt) file in the root directory of the repository.
 
   There is no need to sign a contributor agreement to contribute to WildFly BOM Builder Plugin. You just need to explicitly license any contribution under the AL 2.0. If you add any new files to WildFly BOM Builder Plugin, make sure to add the correct header.
 
 ### Java
 
       /*
-       * JBoss, Home of Professional Open Source
-       * Copyright <Year>, Red Hat, Inc. and/or its affiliates, and individual
-       * contributors by the @authors tag. See the copyright.txt in the
-       * distribution for a full listing of individual contributors.
-       *
-       * Licensed under the Apache License, Version 2.0 (the "License");
-       * you may not use this file except in compliance with the License.
-       * You may obtain a copy of the License at
-       * http://www.apache.org/licenses/LICENSE-2.0
-       * Unless required by applicable law or agreed to in writing, software
-       * distributed under the License is distributed on an "AS IS" BASIS,
-       * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-       * See the License for the specific language governing permissions and
-       * limitations under the License.
+       * Copyright The WildFly Authors
+       * SPDX-License-Identifier: Apache-2.0
        */
 
 ### XML
 
       <!--
-       JBoss, Home of Professional Open Source
-       Copyright <Year>, Red Hat, Inc. and/or its affiliates, and individual
-       contributors by the @authors tag. See the copyright.txt in the
-       distribution for a full listing of individual contributors.
-
-       Licensed under the Apache License, Version 2.0 (the "License");
-       you may not use this file except in compliance with the License.
-       You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-       Unless required by applicable law or agreed to in writing, software
-       distributed under the License is distributed on an "AS IS" BASIS,
-       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-       See the License for the specific language governing permissions and
-       limitations under the License.
+         Copyright The WildFly Authors
+         SPDX-License-Identifier: Apache-2.0	  
        -->
 
 ### Properties files
 
-       # JBoss, Home of Professional Open Source
-       # Copyright <Year>, Red Hat, Inc. and/or its affiliates, and individual
-       # contributors by the @authors tag. See the copyright.txt in the
-       # distribution for a full listing of individual contributors.
-       #
-       # Licensed under the Apache License, Version 2.0 (the "License");
-       # you may not use this file except in compliance with the License.
-       # You may obtain a copy of the License at
-       # http://www.apache.org/licenses/LICENSE-2.0
-       # Unless required by applicable law or agreed to in writing, software
-       # distributed under the License is distributed on an "AS IS" BASIS,
-       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-       # See the License for the specific language governing permissions and
-       # limitations under the License.
+       # Copyright The WildFly Authors
+       # SPDX-License-Identifier: Apache-2.0
 
+Compliance with Laws and Regulations
+------------------------------------
+
+All contributions must comply with applicable laws and regulations, including U.S. export control and sanctions restrictions.
+For background, see the Linux Foundation’s guidance:
+[Navigating Global Regulations and Open Source: US OFAC Sanctions](https://www.linuxfoundation.org/blog/navigating-global-regulations-and-open-source-us-ofac-sanctions).
 
