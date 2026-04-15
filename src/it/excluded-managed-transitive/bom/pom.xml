@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright The WildFly Authors
+  ~ SPDX-License-Identifier: Apache-2.0
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>@pom.groupId@</groupId>
+    <artifactId>excluded-managed-transitive</artifactId>
+    <version>@pom.version@</version>
+  </parent>
+  <artifactId>bom-builder</artifactId>
+  <packaging>pom</packaging>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy</artifactId>
+        <version>1.18.10</version>
+      </dependency>
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>3.27.6</version>
+        <!-- this depends on byte-buddy 1.17.7 -->
+      </dependency>
+      <dependency>
+        <groupId>@pom.groupId@</groupId>
+        <artifactId>module1</artifactId>
+        <version>@pom.version@</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.wildfly.plugins</groupId>
+        <artifactId>wildfly-bom-builder-plugin</artifactId>
+        <version>@pom.version@</version>
+        <executions>
+          <execution>
+            <id>build-bom</id>
+            <goals>
+              <goal>build-bom</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <bomGroupId>@pom.groupId@</bomGroupId>
+          <bomArtifactId>excluded-managed-transitive-bom</bomArtifactId>
+          <bomVersion>$@pom.version@</bomVersion>
+          <bomWithDependencies>true</bomWithDependencies>
+          <includeDependencies>
+            <dependency>
+              <groupId>@pom.groupId@</groupId>
+              <artifactId>module1</artifactId>
+            </dependency>
+          </includeDependencies>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
