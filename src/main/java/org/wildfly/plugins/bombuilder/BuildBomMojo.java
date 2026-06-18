@@ -788,7 +788,7 @@ public class BuildBomMojo
             }
             return rep;
         };
-        VersionResolverFactory factory = new VersionResolverFactory(repositorySystem, session, mapper);
+        VersionResolverFactory factory = new VersionResolverFactory(repositorySystem, session, null, mapper);
         return new ChannelSession(channels, factory);
     }
 
