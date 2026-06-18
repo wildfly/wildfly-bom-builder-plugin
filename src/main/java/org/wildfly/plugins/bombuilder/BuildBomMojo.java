@@ -23,6 +23,13 @@
 
 package org.wildfly.plugins.bombuilder;
 
+import org.apache.maven.execution.MavenSession;
+import org.apache.maven.project.DefaultProjectBuildingRequest;
+import org.apache.maven.project.DependencyResolutionException;
+import org.apache.maven.project.ProjectBuilder;
+import org.apache.maven.project.ProjectBuildingException;
+import org.apache.maven.project.ProjectBuildingRequest;
+import org.apache.maven.project.ProjectBuildingResult;
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.wildfly.channel.Channel;
@@ -238,12 +245,25 @@ public class BuildBomMojo
     @Component
     private ProjectDependenciesResolver projectDependenciesResolver;
 
+    @Component
+    private MavenSession mavenSession;
+
+    @Component
+    private ProjectBuilder projectBuilder;
+
     private final PomDependencyVersionsTransformer versionsTransformer;
     private final ModelWriter modelWriter;
 
 
     @Parameter(alias = "channels", required = false)
     private List<ChannelConfiguration> channels;
+
+
+    /**
+     * Set to {@code false} to not validate the BOM dependency management against channels
+     */
+    @Parameter
+    private boolean channelsValidation = true;
 
     public BuildBomMojo() {
         this(new ModelWriter(), new PomDependencyVersionsTransformer());
@@ -417,6 +437,45 @@ public class BuildBomMojo
         // write pom
         final File file = new File(mavenProject.getBuild().getDirectory(), outputFilename);
         modelWriter.writeModel(model, file);
+        if (channelsValidation) {
+            // validate BOM against channels
+            final ChannelSession channelSession = getChannelSession();
+            if (channelSession != null) {
+                ProjectBuildingRequest request = new DefaultProjectBuildingRequest(mavenSession.getProjectBuildingRequest());
+                try {
+                    ProjectBuildingResult result = projectBuilder.build(file, request);
+                    MavenProject bomProject = result.getProject();
+                    for (Dependency managedDependency : bomProject.getDependencyManagement().getDependencies()) {
+                        if (!"import".equals(managedDependency.getScope())) {
+                            bomProject.getDependencies().add(managedDependency);
+                        }
+                    }
+                    for (org.eclipse.aether.graph.Dependency aDependency : projectDependenciesResolver.resolve(new DefaultDependencyResolutionRequest(bomProject, repositorySystemSession)).getDependencies()) {
+                        final Dependency resolvedDependency = new Dependency();
+                        resolvedDependency.setGroupId(trim(aDependency.getArtifact().getGroupId()));
+                        resolvedDependency.setArtifactId(trim(aDependency.getArtifact().getArtifactId()));
+                        resolvedDependency.setType(trim(aDependency.getArtifact().getExtension()));
+                        String resolvedClassifier = trim(aDependency.getArtifact().getClassifier());
+                        if (resolvedClassifier != null && !resolvedClassifier.isEmpty()) {
+                            resolvedDependency.setClassifier(resolvedClassifier);
+                        }
+                        resolvedDependency.setVersion(aDependency.getArtifact().getVersion());
+                        try {
+                            final VersionResult latestVersion = channelSession.findLatestMavenArtifactVersion(resolvedDependency.getGroupId(), resolvedDependency.getArtifactId(), resolvedDependency.getType(), resolvedDependency.getClassifier(), resolvedDependency.getVersion());
+                            if (!latestVersion.getVersion().equals(resolvedDependency.getVersion())) {
+                                throw new MojoExecutionException("Failed to verify BOM with channels, BOM resolved dependency " + resolvedDependency.getManagementKey() + "'s BOM version (" + resolvedDependency.getVersion() + ") does not matches channels (" + latestVersion + ")");
+                            }
+                        } catch (UnresolvedMavenArtifactException e) {
+                            // ignore
+                        }
+                    }
+                } catch (ProjectBuildingException e) {
+                    throw new MojoExecutionException(e);
+                } catch (DependencyResolutionException e) {
+                    throw new MojoExecutionException(e);
+                }
+            }
+        }
         // attach the artifact
         final Artifact pomArtifact =
                 new DefaultArtifact(
@@ -449,29 +508,7 @@ public class BuildBomMojo
         final Set<String> managedExclusions = new HashSet<>();
         final List<String> includedManagedDependencies = new ArrayList<>();
         final List<String> includedManagedDependenciesWithTransitives = new ArrayList<>();
-        ChannelSession channelSession = null;
-        if (this.channels != null) {
-            DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
-            final List<Channel> channels = new ArrayList<>();
-            session.setLocalRepositoryManager(repositorySystemSession.getLocalRepositoryManager());
-            session.setOffline(repositorySystemSession.isOffline());
-            Map<String, RemoteRepository> mapping = new HashMap<>();
-            for (RemoteRepository r : repositories) {
-                mapping.put(r.getId(), r);
-            }
-            for (ChannelConfiguration channelConfiguration : this.channels) {
-                channels.add(channelConfiguration.toChannel(repositories));
-            }
-            Function<org.wildfly.channel.Repository, RemoteRepository> mapper = r -> {
-                RemoteRepository rep = mapping.get(r.getId());
-                if (rep == null) {
-                    rep = DEFAULT_REPOSITORY_MAPPER.apply(r);
-                }
-                return rep;
-            };
-            VersionResolverFactory factory = new VersionResolverFactory(repositorySystem, session, mapper);
-            channelSession = new ChannelSession(channels, factory);
-        }
+        final ChannelSession channelSession = getChannelSession();
         for (Dependency dependency : dependencies) {
             if (isExcludedDependency(dependency) && getIncludedTransitiveDependency(dependency) == null) {
                 getLog().info("Skipping dependency excluded by config: "+dependency.getManagementKey());
@@ -727,6 +764,32 @@ public class BuildBomMojo
         getLog().info("Added " + pomModel.getDependencyManagement().getDependencies().size() + " managed dependencies to the BOM.");
         pomModel.setDependencies(bomDependencies);
         getLog().info("Added " + pomModel.getDependencies().size() + " dependencies to the BOM.");
+    }
+
+    private ChannelSession getChannelSession() throws MojoExecutionException {
+        if (this.channels == null) {
+            return null;
+        }
+        DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
+        final List<Channel> channels = new ArrayList<>();
+        session.setLocalRepositoryManager(repositorySystemSession.getLocalRepositoryManager());
+        session.setOffline(repositorySystemSession.isOffline());
+        Map<String, RemoteRepository> mapping = new HashMap<>();
+        for (RemoteRepository r : repositories) {
+            mapping.put(r.getId(), r);
+        }
+        for (ChannelConfiguration channelConfiguration : this.channels) {
+            channels.add(channelConfiguration.toChannel(repositories));
+        }
+        Function<org.wildfly.channel.Repository, RemoteRepository> mapper = r -> {
+            RemoteRepository rep = mapping.get(r.getId());
+            if (rep == null) {
+                rep = DEFAULT_REPOSITORY_MAPPER.apply(r);
+            }
+            return rep;
+        };
+        VersionResolverFactory factory = new VersionResolverFactory(repositorySystem, session, mapper);
+        return new ChannelSession(channels, factory);
     }
 
     private List<Dependency> resolveBomDependencies(MavenProject resolverProject, Map<String, Dependency> managedDependenciesMap, List<Exclusion> dependenciesExcludedFromResolving, ChannelSession channelSession) throws MojoExecutionException {
