@@ -21,7 +21,7 @@ file.withReader { reader ->
     if (line.contains("<artifactId>byte-buddy</artifactId>")) {
       foundDependency3 = true
     }
-    if (line.contains("<version.org.assertj>3.27.6</version.org.assertj>")) {
+    if (line.contains("<version.org.assertj>3.27.7</version.org.assertj>")) {
       foundDependency2Version = true
     }
     if (line.contains("<version.net.bytebuddy>1.18.10</version.net.bytebuddy>")) {
