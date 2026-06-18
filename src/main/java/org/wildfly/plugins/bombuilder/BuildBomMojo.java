@@ -664,12 +664,13 @@ public class BuildBomMojo
                         resolverProjectDependency.getExclusions().addAll(dependenciesExcludedFromResolving);
                     }
                     resolverProject.getDependencies().add(resolverProjectDependency);
-                }
-                for (Dependency resolvedDependency : resolveBomDependencies(resolverProject, managedDependenciesMap, dependenciesExcludedFromResolving)) {
-                    addBomManagedDependency(resolvedDependency, bomManagedDependencies);
                     if (bomWithDependencies) {
-                        addBomDependency(resolvedDependency, bomDependencies);
+                        // BOM with dependencies should only have included in dependencies so add now
+                        addBomDependency(resolverProjectDependency, bomDependencies);
                     }
+                }
+                for (Dependency resolvedDependency : resolveBomDependencies(resolverProject, managedDependenciesMap, dependenciesExcludedFromResolving, channelSession)) {
+                    addBomManagedDependency(resolvedDependency, bomManagedDependencies);
                 }
             } else {
                 // no need to resolve transitives
@@ -683,11 +684,42 @@ public class BuildBomMojo
             }
         } else {
             // if includeDependencies is not defined... add all managed deps to BOM
-            for (String managedDependencyKey : orderedManagedDependencies) {
-                final Dependency managedDependency = managedDependenciesMap.get(managedDependencyKey);
-                addBomManagedDependency(managedDependency, bomManagedDependencies);
-                if (bomWithDependencies) {
-                    addBomDependency(managedDependency, bomDependencies);
+            if (channelSession != null) {
+                // oops channels being used, need to resolve everything, to ensure unmanaged transitives are in sync
+                resolverProject.getDependencyManagement().setDependencies(new ArrayList<>());
+                resolverProject.setDependencies(new ArrayList<>());
+                for (String orderedManagedDependencyKey : orderedManagedDependencies) {
+                    final Dependency resolverProjectManagedDependency = managedDependenciesMap.get(orderedManagedDependencyKey);
+                    resolverProject.getDependencyManagement().getDependencies().add(resolverProjectManagedDependency);
+                    final Dependency resolverProjectDependency = resolverProjectManagedDependency.clone();
+                    if ("import".equals(resolverProjectManagedDependency.getScope())) {
+                        continue;
+                    }
+                    if (!includeTransitives) {
+                        // add wildcard exclusion to prevent resolving transitives
+                        Exclusion exclusion = new Exclusion();
+                        exclusion.setGroupId(WILDCARD);
+                        exclusion.setArtifactId(WILDCARD);
+                        resolverProjectDependency.getExclusions().add(exclusion);
+                    } else {
+                        resolverProjectDependency.getExclusions().addAll(dependenciesExcludedFromResolving);
+                    }
+                    resolverProject.getDependencies().add(resolverProjectDependency);
+                    if (bomWithDependencies) {
+                        addBomDependency(resolverProjectDependency, bomDependencies);
+                    }
+                }
+                for (Dependency resolvedDependency : resolveBomDependencies(resolverProject, managedDependenciesMap, dependenciesExcludedFromResolving, channelSession)) {
+                    addBomManagedDependency(resolvedDependency, bomManagedDependencies);
+                }
+            } else {
+                // no channels, just add all
+                for (String managedDependencyKey : orderedManagedDependencies) {
+                    final Dependency managedDependency = managedDependenciesMap.get(managedDependencyKey);
+                    addBomManagedDependency(managedDependency, bomManagedDependencies);
+                    if (bomWithDependencies) {
+                        addBomDependency(managedDependency, bomDependencies);
+                    }
                 }
             }
         }
@@ -697,7 +729,7 @@ public class BuildBomMojo
         getLog().info("Added " + pomModel.getDependencies().size() + " dependencies to the BOM.");
     }
 
-    private List<Dependency> resolveBomDependencies(MavenProject resolverProject, Map<String, Dependency> managedDependenciesMap, List<Exclusion> dependenciesExcludedFromResolving) throws MojoExecutionException {
+    private List<Dependency> resolveBomDependencies(MavenProject resolverProject, Map<String, Dependency> managedDependenciesMap, List<Exclusion> dependenciesExcludedFromResolving, ChannelSession channelSession) throws MojoExecutionException {
         final Set<String> resolverProjectDependencies = resolverProject.getDependencies().stream().map(dependency -> dependency.getManagementKey()).collect(Collectors.toSet());
         boolean resolveAgain = false;
         final List<Dependency> resolvedDependencies = new ArrayList<>();
@@ -724,11 +756,25 @@ public class BuildBomMojo
                     } else {
                         resolvedDependencies.add(managedDependency);
                     }
+                } else if (channelSession != null && !resolverProjectDependencies.contains(resolvedDependency.getManagementKey())) {
+                    // override version for non managed transitives that are in the channel with a diff version, to its dep management with the channel version,   version resolved diff from channel, to enforce sync with e with a version diff from , with a diff version, should have its version overridden and added to the BOM dep management
+                    try {
+                        getLog().debug("Resolving non managed dependency "+resolvedDependency.getManagementKey()+"'s latest version on channels... (current = "+resolvedDependency.getVersion()+")");
+                        final VersionResult latestVersion = channelSession.findLatestMavenArtifactVersion(resolvedDependency.getGroupId(), resolvedDependency.getArtifactId(), resolvedDependency.getType(), resolvedDependency.getClassifier(), resolvedDependency.getVersion());
+                        getLog().debug("Resolved non managed dependency "+resolvedDependency.getManagementKey()+"'s latest version on channels: "+latestVersion);
+                        if (!latestVersion.getVersion().equals(resolvedDependency.getVersion())) {
+                            resolvedDependency.setVersion(latestVersion.getVersion());
+                            resolvedDependency.getExclusions().addAll(dependenciesExcludedFromResolving);
+                            resolverProject.getDependencies().add(resolvedDependency);
+                            resolveAgain = true;
+                        }
+                    } catch (UnresolvedMavenArtifactException e) {
+                        // ignore
+                    }
                 }
             }
             if (resolveAgain) {
-                resolverProject.setDependencyArtifacts(null);
-                return resolveBomDependencies(resolverProject, managedDependenciesMap, dependenciesExcludedFromResolving);
+                return resolveBomDependencies(resolverProject, managedDependenciesMap, dependenciesExcludedFromResolving, channelSession);
             } else {
                 return resolvedDependencies;
             }
