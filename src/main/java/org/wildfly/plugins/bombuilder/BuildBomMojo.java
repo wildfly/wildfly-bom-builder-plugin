@@ -701,13 +701,12 @@ public class BuildBomMojo
                         resolverProjectDependency.getExclusions().addAll(dependenciesExcludedFromResolving);
                     }
                     resolverProject.getDependencies().add(resolverProjectDependency);
-                    if (bomWithDependencies) {
-                        // BOM with dependencies should only have included in dependencies so add now
-                        addBomDependency(resolverProjectDependency, bomDependencies);
-                    }
                 }
                 for (Dependency resolvedDependency : resolveBomDependencies(resolverProject, managedDependenciesMap, dependenciesExcludedFromResolving, channelSession)) {
                     addBomManagedDependency(resolvedDependency, bomManagedDependencies);
+                    if (bomWithDependencies) {
+                        addBomDependency(resolvedDependency, bomDependencies);
+                    }
                 }
             } else {
                 // no need to resolve transitives
@@ -742,12 +741,12 @@ public class BuildBomMojo
                         resolverProjectDependency.getExclusions().addAll(dependenciesExcludedFromResolving);
                     }
                     resolverProject.getDependencies().add(resolverProjectDependency);
-                    if (bomWithDependencies) {
-                        addBomDependency(resolverProjectDependency, bomDependencies);
-                    }
                 }
                 for (Dependency resolvedDependency : resolveBomDependencies(resolverProject, managedDependenciesMap, dependenciesExcludedFromResolving, channelSession)) {
                     addBomManagedDependency(resolvedDependency, bomManagedDependencies);
+                    if (bomWithDependencies) {
+                        addBomDependency(resolvedDependency, bomDependencies);
+                    }
                 }
             } else {
                 // no channels, just add all
