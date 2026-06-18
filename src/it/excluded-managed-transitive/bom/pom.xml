@@ -28,8 +28,8 @@
       <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
-        <version>3.27.6</version>
-        <!-- this depends on byte-buddy 1.17.7 -->
+        <version>3.27.7</version>
+        <!-- this depends on byte-buddy 1.18.3 -->
       </dependency>
       <dependency>
         <groupId>@pom.groupId@</groupId>
