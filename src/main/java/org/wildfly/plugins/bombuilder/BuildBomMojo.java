@@ -88,7 +88,7 @@ import static org.wildfly.channel.maven.VersionResolverFactory.DEFAULT_REPOSITOR
 /**
  * Build a BOM based on the dependencies in a GAV
  */
-@Mojo(name = "build-bom", defaultPhase = LifecyclePhase.GENERATE_RESOURCES, requiresDependencyResolution = ResolutionScope.COMPILE)
+@Mojo(name = "build-bom", defaultPhase = LifecyclePhase.GENERATE_RESOURCES, requiresDependencyResolution = ResolutionScope.COMPILE, threadSafe = true)
 public class BuildBomMojo
         extends AbstractMojo {
 
@@ -274,6 +274,7 @@ public class BuildBomMojo
         this.modelWriter = modelWriter;
     }
 
+    @Override
     public void execute()
             throws MojoExecutionException {
         if (getLog().isDebugEnabled()) {
