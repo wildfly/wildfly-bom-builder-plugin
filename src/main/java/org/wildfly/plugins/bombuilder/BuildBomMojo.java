@@ -30,7 +30,6 @@ import org.apache.maven.project.ProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.project.ProjectBuildingResult;
-import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.wildfly.channel.Channel;
 import org.wildfly.channel.ChannelSession;
@@ -770,10 +769,8 @@ public class BuildBomMojo
         if (this.channels == null) {
             return null;
         }
-        DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
+        DefaultRepositorySystemSession session = new DefaultRepositorySystemSession(repositorySystemSession);
         final List<Channel> channels = new ArrayList<>();
-        session.setLocalRepositoryManager(repositorySystemSession.getLocalRepositoryManager());
-        session.setOffline(repositorySystemSession.isOffline());
         Map<String, RemoteRepository> mapping = new HashMap<>();
         for (RemoteRepository r : repositories) {
             mapping.put(r.getId(), r);
