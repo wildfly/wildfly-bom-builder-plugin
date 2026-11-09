@@ -62,12 +62,13 @@
   </scm>
 
   <properties>
-
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>17</maven.compiler.release>
+    <jdk.min.version>${maven.compiler.release}</jdk.min.version>
     <!-- Repository Deployment Settings -->
     <nexus.repository.staging>wildfly-staging</nexus.repository.staging>
     <nexus.staging.tag>wildfly-bom-builder-plugin-${project.version}</nexus.staging.tag>
-
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Dependencies versions -->
     <version.maven>3.10.0</version.maven>
     <version.mavenPluginTools>3.16.0</version.mavenPluginTools>
     <version.plexusUtils>4.1.0</version.plexusUtils>
