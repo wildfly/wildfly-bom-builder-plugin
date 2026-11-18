@@ -71,7 +71,7 @@
     <!-- Dependencies versions -->
     <version.maven>3.10.0</version.maven>
     <version.mavenPluginTools>3.16.0</version.mavenPluginTools>
-    <version.plexusUtils>4.1.0</version.plexusUtils>
+    <version.plexusUtils>4.2.0</version.plexusUtils>
     <version.wildFlyChannels>1.4.0.Final</version.wildFlyChannels>
   </properties>
 
